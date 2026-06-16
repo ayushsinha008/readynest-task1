@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.DS_Store
+.gemini
+*.log
+mongo-data/
+server/mongo-data/
