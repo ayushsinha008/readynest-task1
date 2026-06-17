@@ -87,7 +87,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    const { accessToken, refreshToken } = generateTokens(res, user._id as string);
+    const { accessToken, refreshToken } = generateTokens(res, (user._id as any).toString());
 
     res.status(200).json({
       success: true,
@@ -104,10 +104,14 @@ export const logout = (req: Request, res: Response) => {
   res.cookie('accessToken', 'none', {
     expires: new Date(Date.now() + 10 * 1000),
     httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   });
   res.cookie('refreshToken', 'none', {
     expires: new Date(Date.now() + 10 * 1000),
     httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   });
 
   res.status(200).json({ success: true, message: 'Logged out successfully' });
@@ -145,7 +149,7 @@ export const verifyOTP = async (req: Request, res: Response, next: NextFunction)
     user.otpExpires = undefined;
     await user.save();
 
-    const { accessToken, refreshToken } = generateTokens(res, user._id as string);
+    const { accessToken, refreshToken } = generateTokens(res, (user._id as any).toString());
 
     res.status(200).json({
       success: true,

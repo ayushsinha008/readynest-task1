@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import Stripe from 'stripe';
 import User from '../models/User';
 
@@ -111,7 +111,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
+        const session = event.data.object as any;
         const userId = session.client_reference_id;
         const subscriptionId = session.subscription as string;
         const customerId = session.customer as string;
@@ -129,7 +129,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
       }
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object as any;
         const customerId = subscription.customer as string;
         const status = subscription.status; // 'active', 'canceled', 'past_due'
         

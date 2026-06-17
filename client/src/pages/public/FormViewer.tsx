@@ -243,7 +243,7 @@ export function FormRenderer({ formSchema, onSubmit }: { formSchema: any, onSubm
                       type="button"
                       onClick={() => onChange(star)}
                       className={`text-3xl transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ink rounded-sm ${
-                        (value || 0) >= star ? 'text-badge-orange' : 'text-surface-strong hover:text-badge-orange/50'
+                        (Number(value) || 0) >= star ? 'text-badge-orange' : 'text-surface-strong hover:text-badge-orange/50'
                       }`}
                     >
                       ★
