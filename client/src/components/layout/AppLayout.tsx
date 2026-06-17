@@ -40,11 +40,47 @@ export default function AppLayout() {
     }
     return [];
   });
+  const [browserNotificationEnabled, setBrowserNotificationEnabled] = useState(
+    typeof Notification !== 'undefined' && Notification.permission === 'granted'
+  );
+
+  // Fetch Notification History
+  useEffect(() => {
+    if (isAuthenticated) {
+      api.get('/analytics/notifications').then((res) => {
+        if (res.data?.success && res.data?.notifications) {
+          setNotifications(prev => {
+            const merged = [...prev];
+            res.data.notifications.forEach((newNotif: any) => {
+              if (!merged.find(n => n.id === newNotif.id)) {
+                merged.push(newNotif);
+              }
+            });
+            return merged.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 50);
+          });
+        }
+      }).catch(err => console.error("Failed to load notifications history", err));
+    }
+  }, [isAuthenticated]);
 
   // Save notifications to localStorage when they change
   useEffect(() => {
     localStorage.setItem('formbuilder_notifications', JSON.stringify(notifications));
   }, [notifications]);
+
+  const requestBrowserNotification = async () => {
+    if (!('Notification' in window)) {
+      toast.error('This browser does not support desktop notifications.');
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      setBrowserNotificationEnabled(true);
+      toast.success('Desktop notifications enabled!');
+    } else {
+      toast.error('Permission denied for notifications.');
+    }
+  };
 
   useEffect(() => { checkAuth(); }, [checkAuth]);
 
@@ -75,6 +111,13 @@ export default function AppLayout() {
           duration: 5000,
           position: 'top-right',
         });
+
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('New Form Submission', {
+            body: data.message,
+            icon: '/favicon.ico'
+          });
+        }
       });
 
       return () => {
@@ -337,6 +380,17 @@ export default function AppLayout() {
                         </button>
                       )}
                     </div>
+                    {!browserNotificationEnabled && (
+                      <div className="bg-blue-50/50 border-b border-blue-100 px-4 py-3 flex flex-col gap-2">
+                        <p className="text-[11px] text-blue-800 leading-tight font-medium">Enable desktop notifications to get alerted even when the tab is hidden.</p>
+                        <button 
+                          onClick={requestBrowserNotification}
+                          className="bg-blue-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg w-fit hover:bg-blue-700 transition-colors"
+                        >
+                          Enable Desktop Notifications
+                        </button>
+                      </div>
+                    )}
                     <div className="max-h-[320px] overflow-y-auto">
                       {notifications.length === 0 ? (
                         <div className="px-4 py-8 text-center text-sm text-gray-500 flex flex-col items-center">

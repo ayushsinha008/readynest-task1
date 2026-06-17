@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../lib/api';
+import LogoIcon from '../../components/icons/LogoIcon';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -23,41 +24,45 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-canvas">
-      <div className="w-full max-w-md p-8 bg-canvas">
-        {/* Asterisk to mimic Anthropic spike mark */}
+    <div className="flex min-h-screen items-center justify-center bg-[#f9fafb] px-4 font-sans relative overflow-hidden">
+      {/* Optional: subtle background pattern */}
+      <div className="absolute inset-0 bg-dot-pattern opacity-50 z-0 pointer-events-none"></div>
+      
+      <div className="w-full max-w-[440px] p-8 sm:p-10 bg-white rounded-[24px] shadow-xl border border-gray-100 relative z-10">
         <div className="flex justify-center mb-6">
-          <span className="text-4xl leading-none font-bold text-ink">*</span>
+          <LogoIcon className="w-12 h-12 text-ink" />
         </div>
-        <h2 className="text-4xl font-display font-normal text-center mb-8 tracking-tight text-ink">Welcome back.</h2>
+        <h2 className="text-[32px] font-display font-bold text-center mb-8 tracking-tight text-ink">Welcome back.</h2>
         {error && <div className="mb-6 text-destructive text-sm text-center">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium mb-2 text-body-strong">Email</label>
+            <label className="block text-sm font-semibold mb-2 text-gray-700">Email</label>
             <input 
               type="email" 
               value={email} 
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-hairline bg-canvas rounded-md px-[14px] py-[10px] text-body focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" 
+              className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 text-ink focus:bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" 
               required 
+              placeholder="name@example.com"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2 text-body-strong">Password</label>
+            <label className="block text-sm font-semibold mb-2 text-gray-700">Password</label>
             <input 
               type="password" 
               value={password} 
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-hairline bg-canvas rounded-md px-[14px] py-[10px] text-body focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" 
+              className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 text-ink focus:bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" 
               required 
+              placeholder="••••••••"
             />
           </div>
-          <button type="submit" className="w-full bg-primary text-on-primary rounded-md h-[40px] font-medium hover:bg-primary-active transition-colors mt-2">
+          <button type="submit" className="w-full bg-primary text-on-primary rounded-xl h-[52px] font-bold text-[16px] hover:bg-primary-active transition-all shadow-md mt-6 hover:-translate-y-0.5 active:translate-y-0">
             Continue
           </button>
         </form>
-        <p className="mt-8 text-center text-sm text-muted">
-          Don't have an account? <Link to="/register" className="text-primary hover:underline">Register</Link>
+        <p className="mt-8 text-center text-[15px] text-gray-500 font-medium">
+          Don't have an account? <Link to="/register" className="text-primary font-semibold hover:underline">Register</Link>
         </p>
       </div>
     </div>

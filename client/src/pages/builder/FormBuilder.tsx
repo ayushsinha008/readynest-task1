@@ -299,76 +299,100 @@ export default function FormBuilder() {
             <div className="p-8 space-y-8">
               {/* Primary Color Section */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-bold text-ink mb-3 uppercase tracking-wide">
+                <label className="flex items-center gap-2 text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">
                   <div className="w-2 h-2 rounded-full bg-primary"></div> Primary Accent Color
                 </label>
-                <div className="flex gap-4 items-center mb-4">
-                  <div className="relative group">
+                <div className="flex gap-3 items-center mb-4">
+                  <div className="relative group shrink-0">
                     <input
                       type="color"
                       value={theme?.primaryColor || '#4f46e5'}
                       onChange={(e) => setTheme({ ...theme, primaryColor: e.target.value })}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                     />
                     <div 
-                      className="w-14 h-14 rounded-2xl shadow-sm border-2 border-white ring-1 ring-hairline group-hover:scale-105 transition-transform"
+                      className="w-12 h-12 rounded-[14px] shadow-sm border border-gray-200 group-hover:scale-105 transition-transform"
                       style={{ backgroundColor: theme?.primaryColor || '#4f46e5' }}
                     />
                   </div>
-                  <input
-                    type="text"
-                    value={theme?.primaryColor || '#4f46e5'}
-                    onChange={(e) => setTheme({ ...theme, primaryColor: e.target.value })}
-                    className="flex-1 h-14 px-4 rounded-xl border border-hairline bg-surface-soft text-ink text-base outline-none focus:border-ink transition-all uppercase font-mono font-bold"
-                  />
+                  <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <span className="text-gray-400 font-medium">HEX</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={theme?.primaryColor || '#4f46e5'}
+                      onChange={(e) => setTheme({ ...theme, primaryColor: e.target.value })}
+                      className="w-full h-12 pl-12 pr-4 rounded-[14px] border border-gray-200 bg-gray-50/50 text-ink text-sm outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 transition-all uppercase font-medium tracking-wide"
+                    />
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2.5">
                   {PRESET_COLORS.map(color => (
                     <button
                       key={color}
                       onClick={() => setTheme({ ...theme, primaryColor: color })}
-                      className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${theme?.primaryColor === color ? 'border-ink scale-110 shadow-md' : 'border-white ring-1 ring-hairline'}`}
+                      className={`w-7 h-7 rounded-full transition-all hover:scale-110 relative ${theme?.primaryColor === color ? 'scale-110 shadow-sm' : 'border border-gray-200 shadow-sm'}`}
                       style={{ backgroundColor: color }}
-                    />
+                    >
+                      {theme?.primaryColor === color && (
+                        <div className="absolute inset-0 rounded-full border-2 border-white mix-blend-overlay"></div>
+                      )}
+                      {theme?.primaryColor === color && (
+                        <div className="absolute -inset-1 rounded-full border-2 border-primary"></div>
+                      )}
+                    </button>
                   ))}
                 </div>
               </div>
               
-              <hr className="border-hairline" />
+              <hr className="border-gray-100" />
 
               {/* Background Color Section */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-bold text-ink mb-3 uppercase tracking-wide">
+                <label className="flex items-center gap-2 text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">
                   <div className="w-2 h-2 rounded-full bg-gray-300"></div> Background Color
                 </label>
-                <div className="flex gap-4 items-center mb-4">
-                  <div className="relative group">
+                <div className="flex gap-3 items-center mb-4">
+                  <div className="relative group shrink-0">
                     <input
                       type="color"
                       value={theme?.backgroundColor || '#ffffff'}
                       onChange={(e) => setTheme({ ...theme, backgroundColor: e.target.value })}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                     />
                     <div 
-                      className="w-14 h-14 rounded-2xl shadow-sm border-2 border-white ring-1 ring-hairline group-hover:scale-105 transition-transform"
+                      className="w-12 h-12 rounded-[14px] shadow-sm border border-gray-200 group-hover:scale-105 transition-transform"
                       style={{ backgroundColor: theme?.backgroundColor || '#ffffff' }}
                     />
                   </div>
-                  <input
-                    type="text"
-                    value={theme?.backgroundColor || '#ffffff'}
-                    onChange={(e) => setTheme({ ...theme, backgroundColor: e.target.value })}
-                    className="flex-1 h-14 px-4 rounded-xl border border-hairline bg-surface-soft text-ink text-base outline-none focus:border-ink transition-all uppercase font-mono font-bold"
-                  />
+                  <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <span className="text-gray-400 font-medium">HEX</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={theme?.backgroundColor || '#ffffff'}
+                      onChange={(e) => setTheme({ ...theme, backgroundColor: e.target.value })}
+                      className="w-full h-12 pl-12 pr-4 rounded-[14px] border border-gray-200 bg-gray-50/50 text-ink text-sm outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 transition-all uppercase font-medium tracking-wide"
+                    />
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2.5">
                   {PRESET_BGS.map(color => (
                     <button
                       key={color}
                       onClick={() => setTheme({ ...theme, backgroundColor: color })}
-                      className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${theme?.backgroundColor === color ? 'border-ink scale-110 shadow-md' : 'border-white ring-1 ring-hairline'}`}
+                      className={`w-7 h-7 rounded-full transition-all hover:scale-110 relative ${theme?.backgroundColor === color ? 'scale-110 shadow-sm' : 'border border-gray-200 shadow-sm'}`}
                       style={{ backgroundColor: color }}
-                    />
+                    >
+                      {theme?.backgroundColor === color && (
+                        <div className="absolute inset-0 rounded-full border border-gray-200/50 mix-blend-overlay"></div>
+                      )}
+                      {theme?.backgroundColor === color && (
+                        <div className="absolute -inset-1 rounded-full border-2 border-gray-800"></div>
+                      )}
+                    </button>
                   ))}
                 </div>
               </div>

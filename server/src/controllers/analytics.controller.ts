@@ -95,3 +95,31 @@ export const getDashboardStats = async (req: any, res: Response, next: NextFunct
     next(error);
   }
 };
+
+export const getNotifications = async (req: any, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user.id;
+    const forms = await Form.find({ createdBy: userId });
+    const formIds = forms.map(f => f._id);
+
+    const recentResponses = await ResponseModel.find({ formId: { $in: formIds } })
+      .sort({ submittedAt: -1 })
+      .limit(30)
+      .lean();
+
+    const notifications = recentResponses.map(r => {
+      const form = forms.find(f => f._id.toString() === r.formId.toString());
+      return {
+        id: r._id.toString(),
+        message: `New response received for "${form?.title || 'Unknown Form'}"`,
+        formId: r.formId,
+        time: r.submittedAt,
+        read: true // Consider historical notifications as read
+      };
+    });
+
+    res.status(200).json({ success: true, notifications });
+  } catch (error) {
+    next(error);
+  }
+};
