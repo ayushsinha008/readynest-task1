@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import User from '../models/User';
 import { generateTokens } from '../utils/generateToken';
+import { sendEmail } from '../utils/sendEmail';
+
+// Helper to generate 6 digit OTP
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -8,17 +12,57 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return res.status(400).json({ success: false, message: 'User already exists' });
+      if (userExists.isVerified) {
+        return res.status(400).json({ success: false, message: 'User already exists' });
+      } else {
+        // User exists but unverified. Let's update their OTP and resend
+        const otpCode = generateOTP();
+        const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+        
+        userExists.otpCode = otpCode;
+        userExists.otpExpires = otpExpires;
+        // Optionally update password if they are trying to register again
+        userExists.password = password; 
+        await userExists.save();
+
+        const emailResult = await sendEmail({
+          to: userExists.email,
+          subject: 'Verify your FormBuilder account',
+          text: `Your OTP is: ${otpCode}. It will expire in 10 minutes.`,
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: 'OTP sent to email',
+          email: userExists.email,
+          previewUrl: emailResult?.previewUrl
+        });
+      }
     }
 
-    const user = await User.create({ name, email, password });
-    const { accessToken, refreshToken } = generateTokens(res, user._id as string);
+    const otpCode = generateOTP();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+    const user = await User.create({ 
+      name, 
+      email, 
+      password,
+      isVerified: false,
+      otpCode,
+      otpExpires
+    });
+
+    const emailResult = await sendEmail({
+      to: user.email,
+      subject: 'Verify your FormBuilder account',
+      text: `Your OTP is: ${otpCode}. It will expire in 10 minutes.`,
+    });
 
     res.status(201).json({
       success: true,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, avatar: user.avatar },
-      accessToken,
-      refreshToken
+      message: 'OTP sent to email',
+      email: user.email,
+      previewUrl: emailResult?.previewUrl
     });
   } catch (error) {
     next(error);
@@ -33,7 +77,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       return res.status(400).json({ success: false, message: 'Please provide email and password' });
     }
 
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email }).select('+password +isVerified');
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
@@ -67,6 +111,93 @@ export const logout = (req: Request, res: Response) => {
   });
 
   res.status(200).json({ success: true, message: 'Logged out successfully' });
+};
+
+export const verifyOTP = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, otp } = req.body;
+    
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: 'Please provide email and OTP' });
+    }
+
+    const user = await User.findOne({ email }).select('+otpCode +otpExpires');
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ success: false, message: 'User is already verified' });
+    }
+
+    if (!user.otpCode || user.otpCode !== otp.toString()) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP' });
+    }
+
+    if (user.otpExpires && user.otpExpires < new Date()) {
+      return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new one.' });
+    }
+
+    // Success! Verify user
+    user.isVerified = true;
+    user.otpCode = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    const { accessToken, refreshToken } = generateTokens(res, user._id as string);
+
+    res.status(200).json({
+      success: true,
+      message: 'Email verified successfully',
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, avatar: user.avatar },
+      accessToken,
+      refreshToken
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resendOTP = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Please provide email' });
+    }
+
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ success: false, message: 'User is already verified' });
+    }
+
+    const otpCode = generateOTP();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+    user.otpCode = otpCode;
+    user.otpExpires = otpExpires;
+    await user.save();
+
+    const emailResult = await sendEmail({
+      to: user.email,
+      subject: 'Verify your FormBuilder account',
+      text: `Your new OTP is: ${otpCode}. It will expire in 10 minutes.`,
+    });
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'New OTP sent to email',
+      previewUrl: emailResult?.previewUrl
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 // Simplified Forgot Password / Reset Password for prototype

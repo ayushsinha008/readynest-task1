@@ -11,6 +11,9 @@ export interface IUser extends Document {
   subscriptionId?: string;
   subscriptionStatus?: string;
   plan?: string;
+  isVerified: boolean;
+  otpCode?: string;
+  otpExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -31,6 +34,9 @@ const UserSchema: Schema = new Schema(
       enum: ['free', 'pro', 'premium'],
       default: 'free'
     },
+    isVerified: { type: Boolean, default: false },
+    otpCode: { type: String, select: false },
+    otpExpires: { type: Date, select: false },
   },
   { timestamps: true }
 );

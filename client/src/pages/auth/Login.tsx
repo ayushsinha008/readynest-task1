@@ -8,11 +8,13 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuthStore();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       setError('');
       const { data } = await api.post('/auth/login', { email, password });
@@ -20,6 +22,8 @@ export default function Login() {
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Something went wrong');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -33,8 +37,8 @@ export default function Login() {
           <LogoIcon className="w-12 h-12 text-ink" />
         </div>
         <h2 className="text-[32px] font-display font-bold text-center mb-8 tracking-tight text-ink">Welcome back.</h2>
-        {error && <div className="mb-6 text-destructive text-sm text-center">{error}</div>}
-        <form onSubmit={handleSubmit} className="space-y-5">
+        {error && <div className="mb-6 text-destructive text-sm text-center bg-red-50 py-2 rounded-lg">{error}</div>}
+        <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label className="block text-sm font-semibold mb-2 text-gray-700">Email</label>
             <input 
@@ -57,8 +61,8 @@ export default function Login() {
               placeholder="••••••••"
             />
           </div>
-          <button type="submit" className="w-full bg-primary text-on-primary rounded-xl h-[52px] font-bold text-[16px] hover:bg-primary-active transition-all shadow-md mt-6 hover:-translate-y-0.5 active:translate-y-0">
-            Continue
+          <button disabled={isSubmitting} type="submit" className="w-full bg-primary text-on-primary rounded-xl h-[52px] font-bold text-[16px] hover:bg-primary-active transition-all shadow-md mt-6 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70">
+            {isSubmitting ? 'Loading...' : 'Continue'}
           </button>
         </form>
         <p className="mt-8 text-center text-[15px] text-gray-500 font-medium">

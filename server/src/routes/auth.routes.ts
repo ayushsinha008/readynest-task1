@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, login, logout, forgotPassword, resetPassword, getProfile, updateProfile, updatePassword } from '../controllers/auth.controller';
+import { register, login, logout, forgotPassword, resetPassword, getProfile, updateProfile, updatePassword, verifyOTP, resendOTP } from '../controllers/auth.controller';
 import { protect } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validate.middleware';
 import { registerSchema, loginSchema, updateProfileSchema, updatePasswordSchema } from '../schemas/auth.schema';
@@ -8,6 +8,8 @@ const router = express.Router();
 
 router.post('/register', validate(registerSchema), register);
 router.post('/login', validate(loginSchema), login);
+router.post('/verify-otp', verifyOTP);
+router.post('/resend-otp', resendOTP);
 router.post('/logout', logout);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password/:resetToken', resetPassword);
