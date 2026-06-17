@@ -12,11 +12,18 @@ export interface IFormField {
   options?: { label: string; value: string }[]; // For dropdown, radio, checkbox
 }
 
+export interface IFormTheme {
+  primaryColor: string;
+  backgroundColor: string;
+  fontFamily: string;
+}
+
 export interface IForm extends Document {
   title: string;
   description?: string;
   slug: string;
   fields: IFormField[];
+  theme?: IFormTheme;
   createdBy: mongoose.Types.ObjectId;
   isPublished: boolean;
   views: number;
@@ -37,12 +44,19 @@ const FormFieldSchema: Schema = new Schema({
   options: [{ label: String, value: String }],
 });
 
+const FormThemeSchema: Schema = new Schema({
+  primaryColor: { type: String, default: '#4f46e5' },
+  backgroundColor: { type: String, default: '#f9fafb' },
+  fontFamily: { type: String, default: 'Inter' },
+}, { _id: false });
+
 const FormSchema: Schema = new Schema(
   {
     title: { type: String, required: true },
     description: { type: String },
     slug: { type: String, required: true, unique: true },
     fields: [FormFieldSchema],
+    theme: { type: FormThemeSchema, default: () => ({}) },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     isPublished: { type: Boolean, default: false },
     views: { type: Number, default: 0 },

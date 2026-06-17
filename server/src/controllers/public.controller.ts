@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import Form from '../models/Form';
 import ResponseModel from '../models/Response';
+import cloudinary from '../lib/cloudinary';
 
 export const getPublicForm = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -31,6 +32,18 @@ export const submitForm = async (req: Request, res: Response, next: NextFunction
     const { data } = req.body;
 
     // Optional: Add backend validation based on form.fields here
+    for (const field of form.fields) {
+      if (field.type === 'file' && data[field.id]) {
+        try {
+          const uploadRes = await cloudinary.uploader.upload(data[field.id], {
+            folder: `formbuilder/${form._id}`,
+          });
+          data[field.id] = uploadRes.secure_url;
+        } catch (uploadError) {
+          console.error('Cloudinary upload error:', uploadError);
+        }
+      }
+    }
 
     const newResponse = await ResponseModel.create({
       formId: form._id,
@@ -40,6 +53,16 @@ export const submitForm = async (req: Request, res: Response, next: NextFunction
     // Increment submissions
     form.submissions += 1;
     await form.save();
+
+    // Emit real-time notification
+    const io = req.app.get('io');
+    if (io) {
+      io.to(form.createdBy.toString()).emit('new_submission', {
+        formId: form._id,
+        formTitle: form.title,
+        message: `New response received for "${form.title}"`
+      });
+    }
 
     res.status(201).json({ success: true, message: 'Response submitted successfully', responseId: newResponse._id });
   } catch (error) {

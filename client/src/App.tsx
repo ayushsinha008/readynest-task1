@@ -10,6 +10,10 @@ import Register from './pages/auth/Register';
 import Settings from './pages/settings/Settings';
 import Help from './pages/help/Help';
 import MyForms from './pages/forms/MyForms';
+import Pricing from './pages/subscription/Pricing';
+import Success from './pages/subscription/Success';
+import Cancel from './pages/subscription/Cancel';
+import Checkout from './pages/subscription/Checkout';
 import { useAuthStore } from './store/useAuthStore';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -37,6 +41,10 @@ export default function App() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/help" element={<Help />} />
         <Route path="/forms" element={<MyForms />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/success" element={<Success />} />
+        <Route path="/cancel" element={<Cancel />} />
       </Route>
     </Routes>
   );

@@ -8,15 +8,26 @@ import { useFormBuilderStore, type FieldType } from '../../store/useFormBuilderS
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../lib/api';
 import { FormRenderer } from '../public/FormViewer';
-import { X, Loader2, Cloud, CloudOff, CheckCircle2 } from 'lucide-react';
+import { X, Loader2, Cloud, CloudOff, CheckCircle2, Palette, Type, LayoutTemplate, Brush } from 'lucide-react';
+
+const PRESET_COLORS = ['#4f46e5', '#2563eb', '#0ea5e9', '#10b981', '#84cc16', '#eab308', '#f97316', '#ef4444', '#ec4899', '#8b5cf6', '#111111'];
+const PRESET_BGS = ['#ffffff', '#f9fafb', '#f3f4f6', '#fffbeb', '#f0fdf4', '#eff6ff', '#fdf2f8'];
+const BORDER_RADII = [
+  { label: 'Sharp', value: 'none', radius: '0px' },
+  { label: 'Slight', value: 'sm', radius: '4px' },
+  { label: 'Rounded', value: 'md', radius: '8px' },
+  { label: 'Smooth', value: 'xl', radius: '16px' },
+];
 
 export default function FormBuilder() {
-  const { addField, reorderFields, fields, formTitle, formDescription, setFormDetails, setFields } = useFormBuilderStore();
+  const { addField, reorderFields, fields, formTitle, formDescription, theme, setFormDetails, setFields, setTheme } = useFormBuilderStore();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<FieldType | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showThemeSettings, setShowThemeSettings] = useState(false);
   const [loadingForm, setLoadingForm] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstLoad = useRef(true);
   const navigate = useNavigate();
@@ -32,6 +43,9 @@ export default function FormBuilder() {
           const form = res.data.form;
           setFormDetails(form.title || 'Untitled Form', form.description || '');
           setFields(form.fields || []);
+          if (form.theme) {
+            setTheme(form.theme);
+          }
         })
         .catch((err) => {
           console.error('Failed to load form for editing', err);
@@ -58,7 +72,7 @@ export default function FormBuilder() {
 
     autoSaveTimer.current = setTimeout(async () => {
       try {
-        await api.put(`/forms/${id}`, { title: formTitle, description: formDescription, fields });
+        await api.put(`/forms/${id}`, { title: formTitle, description: formDescription, fields, theme });
         setSaveStatus('saved');
         setTimeout(() => setSaveStatus('idle'), 2000);
       } catch (e) {
@@ -67,7 +81,7 @@ export default function FormBuilder() {
     }, 1500); // 1.5 second debounce
 
     return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
-  }, [fields, formTitle, formDescription]);
+  }, [fields, formTitle, formDescription, theme]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -118,6 +132,7 @@ export default function FormBuilder() {
           title: formTitle,
           description: formDescription,
           fields,
+          theme,
         });
       } else {
         // Create new form
@@ -125,11 +140,16 @@ export default function FormBuilder() {
           title: formTitle,
           description: formDescription,
           fields,
+          theme,
         });
       }
       navigate('/dashboard');
-    } catch (error) {
-      console.error('Failed to save form', error);
+    } catch (error: any) {
+      if (error.response?.data?.requiresUpgrade) {
+        setShowUpgradeModal(true);
+      } else {
+        console.error('Failed to save form', error);
+      }
     }
   };
 
@@ -174,8 +194,15 @@ export default function FormBuilder() {
         </div>
         <div className="space-x-3">
           <button
+            onClick={() => setShowThemeSettings(true)}
+            className="rounded-md border border-hairline bg-surface-soft px-4 py-2 text-sm font-medium hover:bg-surface-card text-ink transition-colors shadow-sm flex items-center gap-2 inline-flex"
+          >
+            <Brush className="w-4 h-4" />
+            Theme Settings
+          </button>
+          <button
             onClick={() => setShowPreview(true)}
-            className="rounded-md border border-hairline px-4 py-2 text-sm font-medium hover:bg-surface-card text-ink transition-colors"
+            className="rounded-md border border-hairline bg-surface-soft px-4 py-2 text-sm font-medium hover:bg-surface-card text-ink transition-colors shadow-sm"
           >
             Preview
           </button>
@@ -210,27 +237,237 @@ export default function FormBuilder() {
       </div>
 
       {showPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/20 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-canvas w-full max-w-[760px] rounded-xl border border-hairline shadow-2xl relative my-auto">
+        <div 
+          className="fixed inset-0 z-50 flex py-12 px-4 sm:px-6 overflow-y-auto transition-colors" 
+          style={{ 
+            backgroundColor: theme?.backgroundColor || '#ffffff',
+            fontFamily: theme?.fontFamily ? `"${theme.fontFamily}", sans-serif` : undefined 
+          }}
+        >
+          <div className="max-w-[760px] w-full mx-auto relative my-auto">
             <button
               onClick={() => setShowPreview(false)}
-              className="absolute top-6 right-6 text-muted hover:text-ink transition-colors"
+              className="absolute -top-12 right-0 text-gray-500 hover:text-ink transition-colors bg-white/50 backdrop-blur-sm rounded-full p-2 border border-hairline"
             >
               <X className="w-6 h-6" />
             </button>
-            <div className="p-10 border-b border-hairline bg-surface-card rounded-t-xl">
-              <h1 className="text-[48px] leading-[1.1] font-display font-semibold text-ink tracking-tight">{formTitle || 'Untitled Form'}</h1>
-              {formDescription && <p className="mt-4 text-lg text-muted font-sans">{formDescription}</p>}
+            <div 
+              className={`bg-white border border-hairline overflow-hidden shadow-2xl ${
+                theme?.borderRadius === 'none' ? 'rounded-none' : 
+                theme?.borderRadius === 'sm' ? 'rounded-sm' : 
+                theme?.borderRadius === 'xl' ? 'rounded-[24px]' : 'rounded-xl'
+              }`}
+              style={{ fontFamily: theme?.fontFamily ? `"${theme.fontFamily}", sans-serif` : undefined }}
+            >
+              <div className="p-10 border-b border-hairline bg-surface-card">
+                <h1 className="text-[48px] leading-[1.1] font-display font-semibold text-ink tracking-tight">{formTitle || 'Untitled Form'}</h1>
+                {formDescription && <p className="mt-4 text-lg text-muted font-sans">{formDescription}</p>}
+              </div>
+              <div className="p-10">
+                <FormRenderer
+                  formSchema={{ title: formTitle, description: formDescription, fields, theme }}
+                  onSubmit={async (data) => {
+                    alert(JSON.stringify(data, null, 2));
+                    setShowPreview(false);
+                  }}
+                />
+              </div>
             </div>
-            <div className="p-10">
-              <FormRenderer
-                formSchema={{ title: formTitle, description: formDescription, fields }}
-                onSubmit={async (data) => {
-                  alert(JSON.stringify(data, null, 2));
-                  setShowPreview(false);
-                }}
-              />
+          </div>
+        </div>
+      )}
+
+      {/* Theme Settings Modal */}
+      {showThemeSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-lg rounded-[24px] border border-hairline shadow-2xl relative overflow-hidden my-auto">
+            <div className="px-8 py-6 border-b border-hairline bg-surface-soft flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <Palette className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-ink leading-tight">Theme Settings</h2>
+                  <p className="text-xs text-muted font-medium mt-0.5">Customize the look and feel of your form.</p>
+                </div>
+              </div>
+              <button onClick={() => setShowThemeSettings(false)} className="text-muted hover:text-ink transition-colors bg-white rounded-full border border-hairline p-2 hover:bg-gray-50">
+                <X className="w-5 h-5" />
+              </button>
             </div>
+            
+            <div className="p-8 space-y-8">
+              {/* Primary Color Section */}
+              <div>
+                <label className="flex items-center gap-2 text-sm font-bold text-ink mb-3 uppercase tracking-wide">
+                  <div className="w-2 h-2 rounded-full bg-primary"></div> Primary Accent Color
+                </label>
+                <div className="flex gap-4 items-center mb-4">
+                  <div className="relative group">
+                    <input
+                      type="color"
+                      value={theme?.primaryColor || '#4f46e5'}
+                      onChange={(e) => setTheme({ ...theme, primaryColor: e.target.value })}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <div 
+                      className="w-14 h-14 rounded-2xl shadow-sm border-2 border-white ring-1 ring-hairline group-hover:scale-105 transition-transform"
+                      style={{ backgroundColor: theme?.primaryColor || '#4f46e5' }}
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={theme?.primaryColor || '#4f46e5'}
+                    onChange={(e) => setTheme({ ...theme, primaryColor: e.target.value })}
+                    className="flex-1 h-14 px-4 rounded-xl border border-hairline bg-surface-soft text-ink text-base outline-none focus:border-ink transition-all uppercase font-mono font-bold"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_COLORS.map(color => (
+                    <button
+                      key={color}
+                      onClick={() => setTheme({ ...theme, primaryColor: color })}
+                      className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${theme?.primaryColor === color ? 'border-ink scale-110 shadow-md' : 'border-white ring-1 ring-hairline'}`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+              
+              <hr className="border-hairline" />
+
+              {/* Background Color Section */}
+              <div>
+                <label className="flex items-center gap-2 text-sm font-bold text-ink mb-3 uppercase tracking-wide">
+                  <div className="w-2 h-2 rounded-full bg-gray-300"></div> Background Color
+                </label>
+                <div className="flex gap-4 items-center mb-4">
+                  <div className="relative group">
+                    <input
+                      type="color"
+                      value={theme?.backgroundColor || '#ffffff'}
+                      onChange={(e) => setTheme({ ...theme, backgroundColor: e.target.value })}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <div 
+                      className="w-14 h-14 rounded-2xl shadow-sm border-2 border-white ring-1 ring-hairline group-hover:scale-105 transition-transform"
+                      style={{ backgroundColor: theme?.backgroundColor || '#ffffff' }}
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={theme?.backgroundColor || '#ffffff'}
+                    onChange={(e) => setTheme({ ...theme, backgroundColor: e.target.value })}
+                    className="flex-1 h-14 px-4 rounded-xl border border-hairline bg-surface-soft text-ink text-base outline-none focus:border-ink transition-all uppercase font-mono font-bold"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_BGS.map(color => (
+                    <button
+                      key={color}
+                      onClick={() => setTheme({ ...theme, backgroundColor: color })}
+                      className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${theme?.backgroundColor === color ? 'border-ink scale-110 shadow-md' : 'border-white ring-1 ring-hairline'}`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <hr className="border-hairline" />
+
+              {/* Typography Section */}
+              <div>
+                <label className="flex items-center gap-2 text-sm font-bold text-ink mb-3 uppercase tracking-wide">
+                  <Type className="w-4 h-4 text-gray-400" /> Typography Style
+                </label>
+                <div className="relative">
+                  <select
+                    value={theme?.fontFamily || 'Inter'}
+                    onChange={(e) => setTheme({ ...theme, fontFamily: e.target.value })}
+                    className="w-full h-14 px-4 rounded-xl border border-hairline bg-surface-soft text-ink text-base outline-none focus:border-ink transition-all font-semibold appearance-none hover:bg-gray-50"
+                  >
+                    <option value="Inter">Inter (Clean & Modern)</option>
+                    <option value="Merriweather">Merriweather (Classic Serif)</option>
+                    <option value="Roboto Mono">Roboto Mono (Technical)</option>
+                    <option value="Outfit">Outfit (Bold Display)</option>
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <hr className="border-hairline" />
+
+              {/* Form Radius Section */}
+              <div>
+                <label className="flex items-center gap-2 text-sm font-bold text-ink mb-3 uppercase tracking-wide">
+                  <LayoutTemplate className="w-4 h-4 text-gray-400" /> Form Shape
+                </label>
+                <div className="grid grid-cols-4 gap-3">
+                  {BORDER_RADII.map((radiusOpt) => (
+                    <button
+                      key={radiusOpt.value}
+                      onClick={() => setTheme({ ...theme, borderRadius: radiusOpt.value })}
+                      className={`flex flex-col items-center justify-center py-4 border rounded-xl transition-all ${
+                        (theme?.borderRadius || 'md') === radiusOpt.value 
+                          ? 'border-primary bg-primary/5 text-primary shadow-sm' 
+                          : 'border-hairline bg-white text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 mb-2 border-2 border-current`} style={{ borderRadius: radiusOpt.radius }}></div>
+                      <span className="text-xs font-bold">{radiusOpt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+            
+            <div className="px-8 py-5 border-t border-hairline bg-surface-soft flex justify-between items-center">
+              <span className="text-xs text-muted font-medium">Changes apply immediately</span>
+              <button
+                onClick={() => setShowThemeSettings(false)}
+                className="bg-primary text-on-primary font-bold px-8 py-3 rounded-xl hover:opacity-90 transition-all hover:scale-[1.02] shadow-md hover:shadow-lg active:scale-95"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upgrade Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-[32px] p-8 max-w-md w-full text-center shadow-2xl relative">
+            <button 
+              onClick={() => setShowUpgradeModal(false)}
+              className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full hover:bg-gray-200 text-gray-500 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="w-20 h-20 bg-[#1a3c2a] rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#1a3c2a]/20">
+              <span className="text-3xl font-bold text-white">3</span>
+            </div>
+            <h2 className="text-2xl font-bold text-[#111] mb-3">Form Limit Reached</h2>
+            <p className="text-gray-500 font-medium mb-8 leading-relaxed">
+              You have reached the limit of 3 forms on the Free plan. Please upgrade to Pro to unlock unlimited forms.
+            </p>
+            <button 
+              onClick={() => navigate('/pricing')}
+              className="w-full py-4 rounded-2xl font-bold text-[15px] bg-[#1a3c2a] text-white hover:bg-gray-800 active:scale-[0.98] transition-all shadow-lg mb-3"
+            >
+              Upgrade to Pro
+            </button>
+            <button 
+              onClick={() => navigate('/dashboard')}
+              className="text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              Go to Dashboard
+            </button>
           </div>
         </div>
       )}

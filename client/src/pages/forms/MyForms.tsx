@@ -18,6 +18,12 @@ export default function MyForms() {
   const [qrForm, setQrForm] = useState<any>(null);
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q')?.toLowerCase() || '';
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; formId: string | null; formTitle: string }>({
+    isOpen: false,
+    formId: null,
+    formTitle: ''
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: formsData, isLoading } = useQuery({
     queryKey: ['forms'],
@@ -65,14 +71,30 @@ export default function MyForms() {
     alert('Link copied to clipboard!');
   };
 
-  const deleteForm = async (id: string, title: string) => {
-    if (!window.confirm(`Are you sure you want to delete "${title}"?`)) return;
+  const confirmDelete = (id: string, title: string) => {
+    setDeleteModal({ isOpen: true, formId: id, formTitle: title });
+  };
+
+  const executeDelete = async () => {
+    if (!deleteModal.formId) return;
+    setIsDeleting(true);
     try {
-      await api.delete(`/forms/${id}`);
+      await api.delete(`/forms/${deleteModal.formId}`);
       qc.invalidateQueries({ queryKey: ['forms'] });
-      qc.invalidateQueries({ queryKey: ['dashboardStats'] });
-    } catch (e) {
-      alert('Failed to delete form');
+      setDeleteModal({ isOpen: false, formId: null, formTitle: '' });
+    } catch (err) {
+      alert('Failed to delete form. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const duplicateForm = async (form: any) => {
+    try {
+      await api.post(`/forms/${form._id}/duplicate`);
+      qc.invalidateQueries({ queryKey: ['forms'] });
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to duplicate form. Please try again.');
     }
   };
 
@@ -131,9 +153,14 @@ export default function MyForms() {
                       </p>
                     </div>
                   </div>
-                  <button onClick={() => deleteForm(form._id, form.title)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => duplicateForm(form)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Duplicate Form">
+                      <Copy className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => confirmDelete(form._id, form.title)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete Form">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mb-5">
@@ -247,6 +274,39 @@ export default function MyForms() {
             >
               <Copy className="w-4 h-4" /> Copy Link
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-[24px] p-6 max-w-sm w-full shadow-2xl relative border border-gray-100">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4" style={{ background: '#F0FDF4', color: PRIMARY }}>
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Form?</h3>
+            <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+              Are you sure you want to delete <strong className="text-gray-900">"{deleteModal.formTitle}"</strong>? This action cannot be undone and all responses will be lost permanently.
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setDeleteModal({ isOpen: false, formId: null, formTitle: '' })}
+                className="flex-1 py-3 rounded-xl font-semibold transition-colors"
+                style={{ background: '#f3f4f6', color: '#4b5563' }}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={executeDelete}
+                className="flex-1 py-3 rounded-xl font-semibold text-white transition-opacity hover:opacity-90 flex items-center justify-center gap-2 shadow-sm"
+                style={{ background: PRIMARY }}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Confirm Delete'}
+              </button>
+            </div>
           </div>
         </div>
       )}

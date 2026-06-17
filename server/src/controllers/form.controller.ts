@@ -3,7 +3,19 @@ import Form from '../models/Form';
 
 export const createForm = async (req: any, res: Response, next: NextFunction) => {
   try {
-    const { title, description, fields } = req.body;
+    const { title, description, fields, theme } = req.body;
+
+    // Plan Enforcement
+    if (req.user.plan === 'free') {
+      const formCount = await Form.countDocuments({ createdBy: req.user.id });
+      if (formCount >= 3) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'You have reached the limit of 3 forms on the Free plan. Please upgrade to Pro or Premium to create unlimited forms.',
+          requiresUpgrade: true
+        });
+      }
+    }
     
     // Generate slug from title
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString(36);
@@ -13,6 +25,7 @@ export const createForm = async (req: any, res: Response, next: NextFunction) =>
       description,
       slug,
       fields: fields || [],
+      theme,
       createdBy: req.user.id,
     });
 
@@ -82,6 +95,46 @@ export const deleteForm = async (req: any, res: Response, next: NextFunction) =>
       return res.status(404).json({ success: false, message: 'Form not found' });
     }
     res.status(200).json({ success: true, message: 'Form deleted' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const duplicateForm = async (req: any, res: Response, next: NextFunction) => {
+  try {
+    const originalForm = await Form.findOne({ _id: req.params.id, createdBy: req.user.id });
+    if (!originalForm) {
+      return res.status(404).json({ success: false, message: 'Form not found' });
+    }
+
+    // Plan Enforcement
+    if (req.user.plan === 'free') {
+      const formCount = await Form.countDocuments({ createdBy: req.user.id });
+      if (formCount >= 3) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'You have reached the limit of 3 forms on the Free plan. Please upgrade to Pro or Premium to create unlimited forms.',
+          requiresUpgrade: true
+        });
+      }
+    }
+
+    const title = `${originalForm.title} (Copy)`;
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString(36);
+
+    const duplicatedForm = await Form.create({
+      title,
+      description: originalForm.description,
+      slug,
+      fields: originalForm.fields,
+      theme: originalForm.theme,
+      createdBy: req.user.id,
+      isPublished: false,
+      views: 0,
+      submissions: 0,
+    });
+
+    res.status(201).json({ success: true, form: duplicatedForm });
   } catch (error) {
     next(error);
   }

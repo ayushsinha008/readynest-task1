@@ -38,26 +38,42 @@ export const getDashboardStats = async (req: any, res: Response, next: NextFunct
     }
 
     // ── Weekly chart (last 7 days by day letter) ──────────────────────────
+    const timezone = (req.headers['x-timezone'] as string) || 'UTC';
+    
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-    sevenDaysAgo.setHours(0, 0, 0, 0);
+    // Rough approximation, but we use the exact date strings below
 
     const dailyTrend = await ResponseModel.aggregate([
       { $match: { formId: { $in: formIds }, submittedAt: { $gte: sevenDaysAgo } } },
-      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$submittedAt' } }, submissions: { $sum: 1 } } },
+      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$submittedAt', timezone: timezone } }, submissions: { $sum: 1 } } },
       { $sort: { _id: 1 } }
     ]);
 
-    const dayLetters = ['S','M','T','W','T','F','S'];
     const weeklyData: any[] = [];
     let maxSubs = 0;
+    
+    // Generate dates in the target timezone
     for (let i = 6; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
+      // Use UTC to safely subtract days, then format in user's timezone
+      const d = new Date();
+      // Add timezone offset to properly align "today" with user's local day
+      const localDateString = new Intl.DateTimeFormat('en-US', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d); // "MM/DD/YYYY"
+      const [month, day, year] = localDateString.split('/');
+      
+      const localDate = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+      localDate.setUTCDate(localDate.getUTCDate() - i);
+      
+      const dateStr = localDate.toISOString().split('T')[0]; // "YYYY-MM-DD"
+      
       const found = dailyTrend.find((t: any) => t._id === dateStr);
       const subs = found ? found.submissions : 0;
       if (subs > maxSubs) maxSubs = subs;
-      weeklyData.push({ name: dayLetters[d.getDay()], submissions: subs, isToday: i === 0 });
+      
+      // Get narrow weekday (S, M, T, W, T, F, S)
+      const weekdayStr = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'narrow' }).format(localDate);
+      
+      weeklyData.push({ name: weekdayStr, submissions: subs, isToday: i === 0 });
     }
     // mark the highest bar
     weeklyData.forEach(d => { d.isHighest = d.submissions === maxSubs && maxSubs > 0; });

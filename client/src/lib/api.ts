@@ -6,11 +6,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  // We are using httpOnly cookies, but if we were using localStorage:
-  // const token = localStorage.getItem('accessToken');
-  // if (token) {
-  //   config.headers.Authorization = `Bearer ${token}`;
-  // }
+  config.headers['x-timezone'] = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return config;
 });
 
@@ -19,7 +15,10 @@ api.interceptors.response.use(
   async (error) => {
     // Handle global errors, e.g., redirect to login on 401
     if (error.response?.status === 401) {
-      // Implement token refresh logic or redirect
+      // Session expired, redirect to login page
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        window.location.href = '/login?expired=true';
+      }
     }
     return Promise.reject(error);
   }

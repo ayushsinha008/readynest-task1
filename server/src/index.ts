@@ -1,4 +1,6 @@
 import express, { Express, Request, Response } from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import cors from 'cors';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
@@ -11,6 +13,7 @@ import formRoutes from './routes/form.routes';
 import responseRoutes from './routes/response.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import publicRoutes from './routes/public.routes';
+import subscriptionRoutes from './routes/subscription.routes';
 
 // Import Middleware
 import { errorHandler } from './middleware/error.middleware';
@@ -23,13 +26,35 @@ connectDB();
 const app: Express = express();
 const PORT = process.env.PORT || 5000;
 
+// Setup HTTP server and Socket.IO
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true,
+  }
+});
+
+// Store io in app locals so controllers can use it
+app.set('io', io);
+
+io.on('connection', (socket) => {
+  socket.on('join', (userId) => {
+    socket.join(userId);
+  });
+});
+
 // Middleware
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// Stripe webhook must be parsed as raw body before express.json
+app.use('/api/subscription/webhook', express.raw({ type: 'application/json' }));
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(morgan('dev'));
 
@@ -39,6 +64,7 @@ app.use('/api/forms', formRoutes);
 app.use('/api/responses', responseRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/subscription', subscriptionRoutes);
 
 // Health Check
 app.get('/health', (req: Request, res: Response) => {
@@ -48,6 +74,6 @@ app.get('/health', (req: Request, res: Response) => {
 // Error Handling Middleware
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

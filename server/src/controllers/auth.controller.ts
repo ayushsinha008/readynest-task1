@@ -110,7 +110,87 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
 export const getProfile = async (req: any, res: Response, next: NextFunction) => {
   try {
     const user = await User.findById(req.user.id);
-    res.status(200).json({ success: true, user });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.status(200).json({ 
+      success: true, 
+      user: { 
+        id: user._id, 
+        name: user.name, 
+        email: user.email, 
+        role: user.role, 
+        avatar: user.avatar,
+        plan: user.plan
+      } 
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateProfile = async (req: any, res: Response, next: NextFunction) => {
+  try {
+    const { name, email, avatar } = req.body;
+    const userId = req.user.id;
+
+    if (email) {
+      const emailTaken = await User.findOne({ email, _id: { $ne: userId } });
+      if (emailTaken) {
+        return res.status(400).json({ success: false, message: 'Email is already in use' });
+      }
+    }
+
+    // We only update fields that are provided
+    const updateData: any = {};
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
+    if (avatar !== undefined) updateData.avatar = avatar;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.status(200).json({
+      success: true,
+      user: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        avatar: updatedUser.avatar,
+        plan: updatedUser.plan
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updatePassword = async (req: any, res: Response, next: NextFunction) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.user.id).select('+password');
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Incorrect current password' });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Password updated successfully' });
   } catch (error) {
     next(error);
   }

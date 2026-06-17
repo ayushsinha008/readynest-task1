@@ -7,6 +7,10 @@ export interface IUser extends Document {
   password?: string;
   role: 'admin' | 'user';
   avatar?: string;
+  stripeCustomerId?: string;
+  subscriptionId?: string;
+  subscriptionStatus?: string;
+  plan?: string;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -19,6 +23,14 @@ const UserSchema: Schema = new Schema(
     password: { type: String, select: false },
     role: { type: String, enum: ['admin', 'user'], default: 'user' },
     avatar: { type: String },
+    stripeCustomerId: { type: String },
+    subscriptionId: { type: String },
+    subscriptionStatus: { type: String, enum: ['active', 'canceled', 'past_due', 'free'], default: 'free' },
+    plan: {
+      type: String,
+      enum: ['free', 'pro', 'premium'],
+      default: 'free'
+    },
   },
   { timestamps: true }
 );

@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../../lib/api';
 import { useForm as useHookForm, Controller } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+
+const stripePromise = loadStripe('pk_test_TYooMQauvdEDq54NiTphI7jx');
 
 export default function FormViewer() {
   const { slug } = useParams();
@@ -26,7 +32,24 @@ export default function FormViewer() {
 
   const handleFormSubmit = async (data: any) => {
     try {
-      await api.post(`/public/forms/${slug}/submit`, { data });
+      const processedData = { ...data };
+      
+      // Convert any FileList to base64 strings
+      for (const key in processedData) {
+        if (processedData[key] instanceof FileList && processedData[key].length > 0) {
+          const file = processedData[key][0];
+          processedData[key] = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        } else if (processedData[key] instanceof FileList) {
+          processedData[key] = null;
+        }
+      }
+
+      await api.post(`/public/forms/${slug}/submit`, { data: processedData });
       setIsSubmitted(true);
     } catch (err) {
       alert('Failed to submit form');
@@ -45,16 +68,25 @@ export default function FormViewer() {
     </div>
   );
 
+  const theme = formSchema.theme || {};
+  const wrapperStyle = {
+    backgroundColor: theme.backgroundColor || '#ffffff',
+    fontFamily: theme.fontFamily ? `"${theme.fontFamily}", sans-serif` : undefined,
+  };
+  const radiusClass = theme.borderRadius === 'none' ? 'rounded-none' : theme.borderRadius === 'sm' ? 'rounded-sm' : theme.borderRadius === 'xl' ? 'rounded-[24px]' : 'rounded-xl';
+
   return (
-    <div className="min-h-screen bg-canvas py-12 px-4 sm:px-6">
+    <div className="min-h-screen py-12 px-4 sm:px-6 transition-colors" style={wrapperStyle}>
       <div className="max-w-[760px] mx-auto">
-        <div className="bg-surface-card rounded-xl border border-hairline overflow-hidden">
+        <div className={`bg-white border border-hairline overflow-hidden shadow-sm ${radiusClass}`} style={{ fontFamily: wrapperStyle.fontFamily }}>
           <div className="p-10 border-b border-hairline bg-surface-card">
             <h1 className="text-[48px] leading-[1.1] font-display font-semibold text-ink tracking-tight">{formSchema.title}</h1>
             {formSchema.description && <p className="mt-4 text-lg text-muted font-sans">{formSchema.description}</p>}
           </div>
           <div className="p-10">
-            <FormRenderer formSchema={formSchema} onSubmit={handleFormSubmit} />
+            <Elements stripe={stripePromise}>
+              <FormRenderer formSchema={formSchema} onSubmit={handleFormSubmit} />
+            </Elements>
           </div>
         </div>
       </div>
@@ -63,10 +95,74 @@ export default function FormViewer() {
 }
 
 export function FormRenderer({ formSchema, onSubmit }: { formSchema: any, onSubmit: (data: any) => Promise<void> }) {
-  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useHookForm();
+  const generateZodSchema = (fields: any[]) => {
+    const schemaObject: Record<string, z.ZodTypeAny> = {};
+    fields.forEach(field => {
+      let validator: z.ZodTypeAny;
+      
+      if (field.type === 'email') validator = z.string().email('Invalid email address');
+      else if (field.type === 'number') validator = z.string().refine((val) => !val || !isNaN(Number(val)), 'Must be a number');
+      else if (field.type === 'url') validator = z.string().refine((val) => !val || /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/.test(val), 'Invalid URL');
+      else if (field.type === 'file') validator = z.any();
+      else if (field.type === 'payment') validator = z.any();
+      else if (field.type === 'checkbox') validator = z.any();
+      else if (field.type === 'rating') validator = z.number().min(1).max(5);
+      else if (field.type === 'toggle') validator = z.boolean().default(false);
+      else validator = z.string();
+      
+      if (field.required) {
+        if (['text', 'textarea', 'dropdown', 'radio', 'email', 'number', 'url'].includes(field.type)) {
+           validator = (validator as z.ZodString).min(1, 'This field is required');
+        } else if (field.type === 'file') {
+           validator = validator.refine((files: any) => files?.length > 0, 'File is required');
+        } else if (field.type === 'checkbox') {
+           validator = validator.refine((val: any) => Array.isArray(val) && val.length > 0, 'Must select at least one option');
+        }
+      } else {
+        if (field.type !== 'file' && field.type !== 'payment' && field.type !== 'checkbox' && field.type !== 'rating' && field.type !== 'toggle') {
+          validator = (validator as z.ZodString).optional().or(z.literal(''));
+        } else {
+          validator = validator.optional();
+        }
+      }
+      schemaObject[field.id] = validator;
+    });
+    return z.object(schemaObject);
+  };
+
+  const dynamicSchema = generateZodSchema(formSchema.fields);
+
+  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useHookForm({
+    resolver: zodResolver(dynamicSchema)
+  });
+
+  const stripe = useStripe();
+  const elements = useElements();
+
+  const handleFormSubmit = async (data: any) => {
+    if (stripe && elements) {
+      const cardElement = elements.getElement(CardElement);
+      if (cardElement) {
+        // Mock payment processing since we don't have a real backend payment-intent route yet
+        const { error, paymentMethod } = await stripe.createPaymentMethod({
+          type: 'card',
+          card: cardElement,
+        });
+        if (error) {
+          alert(error.message);
+          return;
+        }
+        data.paymentMethodId = paymentMethod.id;
+      }
+    }
+    await onSubmit(data);
+  };
+
+  const theme = formSchema.theme || {};
+  const radiusClass = theme.borderRadius === 'none' ? 'rounded-none' : theme.borderRadius === 'sm' ? 'rounded-sm' : theme.borderRadius === 'xl' ? 'rounded-xl' : 'rounded-md';
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-8">
       {formSchema.fields.map((field: any) => (
         <div key={field.id} className="space-y-2">
           <label className="block text-sm font-semibold text-ink font-sans">
@@ -78,7 +174,7 @@ export function FormRenderer({ formSchema, onSubmit }: { formSchema: any, onSubm
               type={field.type}
               placeholder={field.placeholder}
               {...register(field.id, { required: field.required })}
-              className="w-full h-10 px-[14px] py-[10px] border-hairline rounded-md focus:border-ink focus:ring-1 focus:ring-ink text-sm border bg-canvas text-ink transition-all font-sans outline-none placeholder-muted"
+              className={`w-full h-12 px-4 border-hairline ${radiusClass} focus:border-ink focus:ring-1 focus:ring-ink text-base border bg-canvas text-ink transition-all font-sans outline-none placeholder-muted`}
             />
           )}
 
@@ -86,14 +182,14 @@ export function FormRenderer({ formSchema, onSubmit }: { formSchema: any, onSubm
             <textarea
               placeholder={field.placeholder}
               {...register(field.id, { required: field.required })}
-              className="w-full px-[14px] py-[10px] border-hairline rounded-md focus:border-ink focus:ring-1 focus:ring-ink text-sm border h-32 bg-canvas text-ink transition-all font-sans outline-none placeholder-muted"
+              className={`w-full px-4 py-3 border-hairline ${radiusClass} focus:border-ink focus:ring-1 focus:ring-ink text-base border h-32 bg-canvas text-ink transition-all font-sans outline-none placeholder-muted`}
             />
           )}
 
           {field.type === 'dropdown' && (
             <select
               {...register(field.id, { required: field.required })}
-              className="w-full h-10 px-[14px] py-[10px] border-hairline rounded-md focus:border-ink focus:ring-1 focus:ring-ink text-sm border bg-canvas text-ink transition-all font-sans outline-none appearance-none"
+              className={`w-full h-12 px-4 border-hairline ${radiusClass} focus:border-ink focus:ring-1 focus:ring-ink text-base border bg-canvas text-ink transition-all font-sans outline-none appearance-none`}
             >
               <option value="">{field.placeholder || 'Select an option'}</option>
               {field.options?.map((opt: any, i: number) => (
@@ -158,7 +254,50 @@ export function FormRenderer({ formSchema, onSubmit }: { formSchema: any, onSubm
             />
           )}
 
-          {errors[field.id] && <p className="text-error text-sm mt-1 font-sans">This field is required</p>}
+          {field.type === 'file' && (
+            <input
+              type="file"
+              {...register(field.id, { required: field.required })}
+              className={`w-full px-4 py-3 border-hairline ${radiusClass} focus:border-ink focus:ring-1 focus:ring-ink text-base border bg-canvas text-ink transition-all font-sans outline-none file:mr-4 file:py-2 file:px-4 file:${radiusClass} file:border-0 file:text-sm file:font-bold file:bg-primary file:text-white hover:file:opacity-90 cursor-pointer`}
+            />
+          )}
+
+          {field.type === 'toggle' && (
+            <label className="flex items-center gap-3 cursor-pointer mt-2">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  {...register(field.id, { required: field.required })}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </div>
+              <span className="text-sm text-ink font-sans">{field.placeholder || 'Enable'}</span>
+            </label>
+          )}
+
+          {field.type === 'payment' && (
+            <div className="mt-2">
+              <div className={`p-4 border border-hairline ${radiusClass} bg-canvas`}>
+                <CardElement options={{
+                  style: {
+                    base: {
+                      fontSize: '16px',
+                      color: '#111',
+                      '::placeholder': {
+                        color: '#898989',
+                      },
+                    },
+                  },
+                }} />
+              </div>
+              {field.placeholder && (
+                <p className="text-sm font-medium text-ink mt-2">Amount to pay: ${field.placeholder}</p>
+              )}
+            </div>
+          )}
+
+          {errors[field.id] && <p className="text-error text-sm mt-1 font-sans">{errors[field.id]?.message as string}</p>}
           {field.helpText && !errors[field.id] && <p className="text-muted text-sm mt-2 font-sans">{field.helpText}</p>}
         </div>
       ))}
@@ -167,7 +306,8 @@ export function FormRenderer({ formSchema, onSubmit }: { formSchema: any, onSubm
         <button
           type="submit"
           disabled={isSubmitting}
-          className="bg-primary text-on-primary rounded-md px-5 py-2 h-10 font-semibold hover:bg-primary-active transition-colors disabled:opacity-50 text-sm"
+          style={formSchema.theme?.primaryColor ? { backgroundColor: formSchema.theme.primaryColor, color: '#fff' } : undefined}
+          className={`bg-primary text-on-primary ${radiusClass} px-8 h-12 font-bold hover:opacity-90 transition-opacity disabled:opacity-50 text-base shadow-sm hover:shadow-md hover:-translate-y-0.5`}
         >
           {isSubmitting ? 'Submitting...' : 'Submit Form'}
         </button>

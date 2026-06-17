@@ -65,6 +65,7 @@ module.exports = {
         'on-dark-soft': "#a1a1aa",
         hairline: "#e5e7eb",
         'hairline-soft': "#f3f4f6",
+        coral: "#ff7f50",
         brand: {
           accent: "#3b82f6",
         },

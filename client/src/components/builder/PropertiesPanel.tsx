@@ -73,6 +73,20 @@ export default function PropertiesPanel() {
           </div>
         )}
 
+        {selectedField.type === 'payment' && (
+          <div>
+            <label className="block text-sm font-semibold text-ink mb-2">Payment Amount ($)</label>
+            <input
+              type="number"
+              name="placeholder"
+              value={selectedField.placeholder || ''}
+              onChange={handleChange}
+              className="w-full h-10 px-[14px] py-[10px] rounded-md border border-hairline bg-canvas text-ink text-sm outline-none focus:border-ink transition-all"
+            />
+            <p className="text-xs text-muted mt-1">Users will be charged this amount.</p>
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-semibold text-ink mb-2">Help Text</label>
           <input

@@ -7,6 +7,8 @@ interface User {
   email: string;
   role: string;
   avatar?: string;
+  plan?: string;
+  subscriptionStatus?: string;
 }
 
 interface AuthState {
@@ -16,6 +18,7 @@ interface AuthState {
   login: (userData: User) => void;
   logout: () => void;
   checkAuth: () => Promise<void>;
+  updateUser: (data: Partial<User>) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -43,4 +46,5 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ isLoading: false });
     }
   },
+  updateUser: (data) => set((state) => ({ user: state.user ? { ...state.user, ...data } : null })),
 }));

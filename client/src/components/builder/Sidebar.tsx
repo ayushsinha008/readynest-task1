@@ -3,7 +3,7 @@ import type { FieldType } from '../../store/useFormBuilderStore';
 import { 
   Type, Mail, Hash, KeyRound, AlignLeft, 
   ChevronDown, CheckSquare, CircleDot, 
-  Calendar, Upload, Phone, Link2, Star, ToggleLeft 
+  Calendar, Upload, Phone, Link2, Star, ToggleLeft, CreditCard
 } from 'lucide-react';
 
 const FIELD_TYPES: { type: FieldType; label: string; icon: any }[] = [
@@ -21,6 +21,7 @@ const FIELD_TYPES: { type: FieldType; label: string; icon: any }[] = [
   { type: 'url', label: 'URL', icon: Link2 },
   { type: 'rating', label: 'Rating', icon: Star },
   { type: 'toggle', label: 'Toggle', icon: ToggleLeft },
+  { type: 'payment', label: 'Payment', icon: CreditCard },
 ];
 
 function DraggableField({ type, label, icon: Icon }: { type: FieldType; label: string; icon: any }) {
