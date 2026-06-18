@@ -7,7 +7,7 @@ dotenv.config();
 
 const connectDB = async () => {
   try {
-    let uri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/formbuilder';
+    let uri = process.env.MONGO_URI || 'mongodb+srv://ayushsinha391_db_user:9qVtNBfDF3JiC1ft@cluster0.tj2ocpv.mongodb.net/formbuilder?appName=Cluster0';
     
     if (process.env.NODE_ENV !== 'production') {
       try {

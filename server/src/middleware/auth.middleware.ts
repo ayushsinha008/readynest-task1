@@ -20,7 +20,8 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET as string) as any;
+    const accessTokenSecret = process.env.JWT_ACCESS_SECRET || 'fallback_access_secret_123';
+    const decoded = jwt.verify(token, accessTokenSecret) as any;
     const user = await User.findById(decoded.id);
 
     if (!user) {
