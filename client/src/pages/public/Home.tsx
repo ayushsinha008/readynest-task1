@@ -3,7 +3,7 @@ import LogoIcon from '../../components/icons/LogoIcon';
 import { useAuthStore } from '../../store/useAuthStore';
 
 export default function Home() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, logout } = useAuthStore();
 
   return (
     <div className="min-h-screen bg-[#e5e7eb] font-sans selection:bg-primary selection:text-on-primary p-4 md:p-6 lg:p-8 flex flex-col">
@@ -27,12 +27,20 @@ export default function Home() {
 
           <div className="flex items-center gap-4">
             {isAuthenticated ? (
-              <Link
-                to="/dashboard"
-                className="bg-primary text-on-primary h-10 px-5 rounded-xl flex items-center justify-center text-[15px] font-bold hover:bg-primary-active transition-colors shadow-sm"
-              >
-                Go to Dashboard
-              </Link>
+              <>
+                <button
+                  onClick={() => logout()}
+                  className="text-[15px] font-medium text-gray-500 hover:text-red-500 transition-colors"
+                >
+                  Log out
+                </button>
+                <Link
+                  to="/dashboard"
+                  className="bg-primary text-on-primary h-10 px-5 rounded-xl flex items-center justify-center text-[15px] font-bold hover:bg-primary-active transition-colors shadow-sm"
+                >
+                  Go to Dashboard
+                </Link>
+              </>
             ) : (
               <>
                 <Link to="/login" className="text-[15px] font-medium text-ink hover:text-gray-600 transition-colors">
