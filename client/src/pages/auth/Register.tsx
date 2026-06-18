@@ -14,8 +14,20 @@ export default function Register() {
   const [successMsg, setSuccessMsg] = useState('');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login } = useAuthStore();
+  const { login, isAuthenticated, isLoading } = useAuthStore();
   const navigate = useNavigate();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-[#f9fafb]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,7 +154,7 @@ export default function Register() {
                 <input 
                   type="text" 
                   value={otp} 
-                  onChange={(e) => setOtp(e.target.value)}
+                  onChange={(e) => setOtp(e.target.value.replace(/\\D/g, ''))}
                   className="w-full text-center tracking-[0.5em] text-2xl font-mono border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 text-ink focus:bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" 
                   required 
                   maxLength={6}

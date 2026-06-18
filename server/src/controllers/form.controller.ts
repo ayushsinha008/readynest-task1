@@ -94,7 +94,12 @@ export const deleteForm = async (req: any, res: Response, next: NextFunction) =>
     if (!form) {
       return res.status(404).json({ success: false, message: 'Form not found' });
     }
-    res.status(200).json({ success: true, message: 'Form deleted' });
+    
+    // Also delete all associated responses
+    const ResponseModel = (await import('../models/Response')).default;
+    await ResponseModel.deleteMany({ formId: form._id });
+
+    res.status(200).json({ success: true, message: 'Form and its responses permanently deleted' });
   } catch (error) {
     next(error);
   }

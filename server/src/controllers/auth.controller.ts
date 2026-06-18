@@ -135,7 +135,8 @@ export const verifyOTP = async (req: Request, res: Response, next: NextFunction)
       return res.status(400).json({ success: false, message: 'User is already verified' });
     }
 
-    if (!user.otpCode || user.otpCode !== otp.toString()) {
+    const cleanOtp = otp.toString().trim();
+    if (!user.otpCode || user.otpCode !== cleanOtp) {
       return res.status(400).json({ success: false, message: 'Invalid OTP' });
     }
 

@@ -30,28 +30,36 @@ connectDB();
 const app: Express = express();
 const PORT = process.env.PORT || 5000;
 
-// Setup HTTP server and Socket.IO
+// Setup HTTP server conditionally
 const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-    credentials: true,
-  }
-});
 
-// Store io in app locals so controllers can use it
-app.set('io', io);
-
-io.on('connection', (socket) => {
-  socket.on('join', (userId) => {
-    socket.join(userId);
+// Initialize Socket.io only if NOT on Vercel
+let io;
+if (!process.env.VERCEL) {
+  io = new Server(httpServer, {
+    cors: {
+      origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+      credentials: true,
+    }
   });
-});
+  
+  app.set('io', io);
+  
+  io.on('connection', (socket) => {
+    socket.on('join', (userId) => {
+      socket.join(userId);
+    });
+  });
+} else {
+  // Dummy io object for Vercel to prevent crashes in controllers
+  app.set('io', {
+    to: () => ({ emit: () => {} }),
+    emit: () => {}
+  });
+}
 
 // Middleware
 app.use(helmet());
-app.use(mongoSanitize());
-app.use(hpp());
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -72,6 +80,11 @@ app.use('/api/subscription/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
+
+// Sanitize data (must be after body parsers)
+// app.use(mongoSanitize()); // Disabled due to Express 5 compatibility issue (Cannot set property query of #<IncomingMessage> which has only a getter)
+app.use(hpp());
+
 app.use(morgan('dev'));
 
 // Routes
@@ -90,6 +103,10 @@ app.get('/health', (req: Request, res: Response) => {
 // Error Handling Middleware
 app.use(errorHandler);
 
-httpServer.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+if (!process.env.VERCEL) {
+  httpServer.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
+
+export default app;

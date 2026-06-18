@@ -16,6 +16,8 @@ import Cancel from './pages/subscription/Cancel';
 import Checkout from './pages/subscription/Checkout';
 import { useAuthStore } from './store/useAuthStore';
 
+import { useEffect } from 'react';
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
 
@@ -26,6 +28,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const { checkAuth } = useAuthStore();
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
   return (
     <Routes>
       <Route path="/" element={<Home />} />
