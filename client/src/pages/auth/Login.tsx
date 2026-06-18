@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, Navigate } from 'react-router-dom';
 import api from '../../lib/api';
 import LogoIcon from '../../components/icons/LogoIcon';
 
