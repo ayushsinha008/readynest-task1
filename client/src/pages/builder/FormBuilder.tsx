@@ -8,7 +8,7 @@ import { useFormBuilderStore, type FieldType } from '../../store/useFormBuilderS
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../lib/api';
 import { FormRenderer } from '../public/FormViewer';
-import { X, Loader2, Cloud, CloudOff, CheckCircle2, Palette, Type, LayoutTemplate, Brush } from 'lucide-react';
+import { X, Loader2, Cloud, CloudOff, CheckCircle2, Palette, Type, LayoutTemplate, Brush, PlusCircle, Layout, Sliders } from 'lucide-react';
 
 const PRESET_COLORS = ['#4f46e5', '#2563eb', '#0ea5e9', '#10b981', '#84cc16', '#eab308', '#f97316', '#ef4444', '#ec4899', '#8b5cf6', '#111111'];
 const PRESET_BGS = ['#ffffff', '#f9fafb', '#f3f4f6', '#fffbeb', '#f0fdf4', '#eff6ff', '#fdf2f8'];
@@ -23,6 +23,7 @@ export default function FormBuilder() {
   const { addField, reorderFields, fields, formTitle, formDescription, theme, setFormDetails, setFields, setTheme } = useFormBuilderStore();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<FieldType | null>(null);
+  const [mobileTab, setMobileTab] = useState<'canvas' | 'sidebar' | 'properties'>('canvas');
   const [showPreview, setShowPreview] = useState(false);
   const [showThemeSettings, setShowThemeSettings] = useState(false);
   const [loadingForm, setLoadingForm] = useState(false);
@@ -192,39 +193,41 @@ export default function FormBuilder() {
             </div>
           )}
         </div>
-        <div className="space-x-3">
+        <div className="space-x-2 md:space-x-3 flex items-center">
           <button
             onClick={() => setShowThemeSettings(true)}
-            className="rounded-md border border-hairline bg-surface-soft px-4 py-2 text-sm font-medium hover:bg-surface-card text-ink transition-colors shadow-sm flex items-center gap-2 inline-flex"
+            className="rounded-md border border-hairline bg-surface-soft px-2 md:px-4 py-2 text-xs md:text-sm font-medium hover:bg-surface-card text-ink transition-colors shadow-sm flex items-center gap-1 md:gap-2 inline-flex"
           >
             <Brush className="w-4 h-4" />
             Theme Settings
           </button>
           <button
             onClick={() => setShowPreview(true)}
-            className="rounded-md border border-hairline bg-surface-soft px-4 py-2 text-sm font-medium hover:bg-surface-card text-ink transition-colors shadow-sm"
+            className="hidden md:inline-block rounded-md border border-hairline bg-surface-soft px-4 py-2 text-sm font-medium hover:bg-surface-card text-ink transition-colors shadow-sm"
           >
             Preview
           </button>
           <button
             onClick={handleSave}
-            className="rounded-md bg-primary px-4 py-2 h-[40px] text-sm font-medium text-on-primary hover:bg-primary-active transition-colors"
+            className="rounded-md bg-primary px-3 md:px-4 py-2 h-[40px] text-xs md:text-sm font-medium text-on-primary hover:bg-primary-active transition-colors"
           >
-            {id ? 'Update Form' : 'Save Form'}
+            {id ? 'Update' : 'Save'}
           </button>
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden flex-col md:flex-row relative">
         <DndContext
           collisionDetection={closestCenter}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           modifiers={[restrictToWindowEdges]}
         >
-          <Sidebar />
-          <Canvas />
-          <PropertiesPanel />
+          <Sidebar className={mobileTab === 'sidebar' ? 'block absolute inset-0 z-40 bg-surface-soft w-full' : 'hidden md:block'} />
+          <div className={`flex-1 overflow-hidden relative ${mobileTab === 'canvas' ? 'flex flex-col' : 'hidden md:flex md:flex-col'}`}>
+            <Canvas />
+          </div>
+          <PropertiesPanel className={mobileTab === 'properties' ? 'block absolute inset-0 z-40 bg-surface-soft w-full' : 'hidden md:block'} />
 
           <DragOverlay>
             {activeId && activeType ? (
@@ -234,6 +237,28 @@ export default function FormBuilder() {
             ) : null}
           </DragOverlay>
         </DndContext>
+
+        {/* Mobile Bottom Navigation */}
+        <div className="md:hidden flex border-t border-hairline bg-surface-soft shrink-0">
+          <button 
+            onClick={() => setMobileTab('sidebar')} 
+            className={`flex-1 py-3 text-[10px] font-bold flex flex-col items-center gap-1 uppercase tracking-wider ${mobileTab === 'sidebar' ? 'text-primary' : 'text-muted'}`}
+          >
+            <PlusCircle className="w-5 h-5" /> Add
+          </button>
+          <button 
+            onClick={() => setMobileTab('canvas')} 
+            className={`flex-1 py-3 text-[10px] font-bold flex flex-col items-center gap-1 uppercase tracking-wider ${mobileTab === 'canvas' ? 'text-primary' : 'text-muted'}`}
+          >
+            <Layout className="w-5 h-5" /> Canvas
+          </button>
+          <button 
+            onClick={() => setMobileTab('properties')} 
+            className={`flex-1 py-3 text-[10px] font-bold flex flex-col items-center gap-1 uppercase tracking-wider ${mobileTab === 'properties' ? 'text-primary' : 'text-muted'}`}
+          >
+            <Sliders className="w-5 h-5" /> Edit
+          </button>
+        </div>
       </div>
 
       {showPreview && (

@@ -228,9 +228,10 @@ export default function Responses() {
     if (!responses || responses.length === 0) return;
     const headers = form?.fields.map((f: any) => f.label) || [];
     const csvContent = [
-      ['Submitted At', ...headers].join(','),
+      ['Submitted At', 'Respondent Email', ...headers].join(','),
       ...responses.map((r: any) => [
         format(new Date(r.submittedAt), 'yyyy-MM-dd HH:mm:ss'),
+        `"${(r.respondentEmail || 'Anonymous').replace(/"/g, '""')}"`,
         ...form.fields.map((f: any) => {
           let val = r.data[f.id] || '';
           if (f.type === 'file' && val) val = '[File Upload]';
@@ -360,6 +361,7 @@ export default function Responses() {
                     <thead className="text-xs text-muted uppercase tracking-wider bg-surface-soft border-b border-hairline">
                       <tr>
                         <th className="px-6 py-4 font-medium">Submitted At</th>
+                        <th className="px-6 py-4 font-medium">Respondent Email</th>
                         {form?.fields.map((f: any) => (
                           <th key={f.id} className="px-6 py-4 font-medium">{f.label}</th>
                         ))}
@@ -378,6 +380,9 @@ export default function Responses() {
                           <tr key={response._id} className="bg-canvas border-b border-hairline hover:bg-surface-soft transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap text-ink">
                               {format(new Date(response.submittedAt), 'MMM d, yyyy HH:mm')}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-ink font-medium">
+                              {response.respondentEmail || 'Anonymous'}
                             </td>
                             {form?.fields.map((f: any) => {
                               const val = response.data?.[f.id];

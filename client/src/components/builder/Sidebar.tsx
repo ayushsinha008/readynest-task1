@@ -49,9 +49,9 @@ function DraggableField({ type, label, icon: Icon }: { type: FieldType; label: s
   );
 }
 
-export default function Sidebar() {
+export default function Sidebar({ className = '' }: { className?: string }) {
   return (
-    <div className="w-72 border-r border-hairline bg-surface-soft p-6 overflow-y-auto">
+    <div className={`w-72 border-r border-hairline bg-surface-soft p-6 overflow-y-auto ${className}`}>
       <h3 className="font-semibold mb-6 text-xs uppercase text-muted tracking-widest">Form Elements</h3>
       <div className="space-y-1">
         {FIELD_TYPES.map((field) => (

@@ -15,6 +15,8 @@ export default function FormViewer() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [respondentEmail, setRespondentEmail] = useState('');
+  const [emailInput, setEmailInput] = useState('');
 
   useEffect(() => {
     const fetchForm = async () => {
@@ -49,7 +51,7 @@ export default function FormViewer() {
         }
       }
 
-      await api.post(`/public/forms/${slug}/submit`, { data: processedData });
+      await api.post(`/public/forms/${slug}/submit`, { data: processedData, respondentEmail });
       setIsSubmitted(true);
     } catch (err) {
       alert('Failed to submit form');
@@ -74,6 +76,41 @@ export default function FormViewer() {
     fontFamily: theme.fontFamily ? `"${theme.fontFamily}", sans-serif` : undefined,
   };
   const radiusClass = theme.borderRadius === 'none' ? 'rounded-none' : theme.borderRadius === 'sm' ? 'rounded-sm' : theme.borderRadius === 'xl' ? 'rounded-[24px]' : 'rounded-xl';
+
+  if (!respondentEmail) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 transition-colors" style={wrapperStyle}>
+        <div className={`bg-white border border-hairline p-8 max-w-md w-full shadow-sm ${radiusClass}`} style={{ fontFamily: wrapperStyle.fontFamily }}>
+          <h2 className="text-2xl font-display font-semibold text-ink tracking-tight mb-2">Welcome</h2>
+          <p className="text-muted font-sans mb-6">Please enter your email to start filling out this form.</p>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (emailInput && emailInput.includes('@')) {
+              setRespondentEmail(emailInput);
+            } else {
+              alert('Please enter a valid email address.');
+            }
+          }}>
+            <input
+              type="email"
+              required
+              placeholder="you@example.com"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              className={`w-full h-12 px-4 border border-hairline ${radiusClass} focus:border-ink focus:ring-1 focus:ring-ink text-base bg-canvas text-ink transition-all font-sans outline-none placeholder-muted mb-4`}
+            />
+            <button
+              type="submit"
+              style={theme.primaryColor ? { backgroundColor: theme.primaryColor, color: '#fff' } : undefined}
+              className={`w-full bg-primary text-on-primary ${radiusClass} h-12 font-bold hover:opacity-90 transition-opacity text-base shadow-sm`}
+            >
+              Continue to Form
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 transition-colors" style={wrapperStyle}>

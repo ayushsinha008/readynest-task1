@@ -10,7 +10,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import {
   Loader2, LayoutDashboard, Plus,
   Settings, HelpCircle, LogOut, Bell, Search,
-  Edit3, QrCode, Download, X, FileText, Crown
+  Edit3, QrCode, Download, X, FileText, Crown, Menu
 } from 'lucide-react';
 import LogoIcon from '../icons/LogoIcon';
 
@@ -30,6 +30,14 @@ export default function AppLayout() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [qrForm, setQrForm] = useState<any>(null);
+  
+  // Mobile menu
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
   
   // Notifications State
   const [showNotifications, setShowNotifications] = useState(false);
@@ -147,9 +155,10 @@ export default function AppLayout() {
       }
       const headers = form.fields.map((f: any) => f.label) || [];
       const csvContent = [
-        ['Submitted At', ...headers].join(','),
+        ['Submitted At', 'Respondent Email', ...headers].join(','),
         ...responses.map((r: any) => [
           format(new Date(r.submittedAt), 'yyyy-MM-dd HH:mm:ss'),
+          `"${(r.respondentEmail || 'Anonymous').replace(/"/g, '""')}"`,
           ...form.fields.map((f: any) => `"${(r.data[f.id] || '').toString().replace(/"/g, '""')}"`)
         ].join(','))
       ].join('\n');
@@ -181,167 +190,195 @@ export default function AppLayout() {
     ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : 'U';
 
+  const SidebarContent = () => (
+    <>
+      {/* Logo */}
+      <div className="flex items-center gap-2.5 px-5 py-5">
+        <div className="w-10 h-10 flex items-center justify-center text-ink">
+          <LogoIcon className="w-full h-full" />
+        </div>
+        <span className="font-bold text-lg tracking-tight" style={{ color: '#111' }}>FormBuilder</span>
+      </div>
+
+      {/* Nav */}
+      <div className="px-3 mb-1">
+        <p className="text-[10px] font-bold uppercase tracking-widest px-2 mb-2" style={{ color: '#9CA3AF' }}>MENU</p>
+      </div>
+      <nav className="px-3 space-y-0.5 mb-4">
+        {menuItems.map((item) => (
+          <NavLink
+            key={item.label}
+            to={item.to}
+            end={item.to === '/dashboard'}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'text-white shadow-sm' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+              }`
+            }
+            style={({ isActive }) => isActive ? { background: PRIMARY } : {}}
+          >
+            {({ isActive }) => (
+              <>
+                <item.icon className="w-4 h-4 flex-shrink-0" style={{ color: isActive ? '#fff' : undefined }} />
+                <span>{item.label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="px-3 pb-2 flex-1">
+        <p className="text-[10px] font-bold uppercase tracking-widest px-2 mb-2" style={{ color: '#9CA3AF' }}>GENERAL</p>
+        <Link
+          to="/settings"
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${location.pathname === '/settings'
+            ? 'bg-primary text-white shadow-sm'
+            : 'text-muted hover:text-ink hover:bg-surface-soft'
+            }`}
+        >
+          <Settings className="w-4 h-4" />
+          Settings
+        </Link>
+        <Link
+          to="/help"
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${location.pathname === '/help'
+            ? 'bg-primary text-white shadow-sm'
+            : 'text-muted hover:text-ink hover:bg-surface-soft'
+            }`}
+        >
+          <HelpCircle className="w-4 h-4" />
+          Help
+        </Link>
+        <button
+          onClick={() => logout()}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted hover:text-ink hover:bg-surface-soft transition-all"
+        >
+          <LogOut className="w-4 h-4" />
+          Logout
+        </button>
+      </div>
+
+      {/* Bottom promo card */}
+      {user?.plan === 'free' ? (
+        <div className="mx-3 mb-4 p-5 rounded-[20px] overflow-hidden relative shadow-lg" style={{ background: 'linear-gradient(135deg, #1a3c2a 0%, #2d6a4f 100%)' }}>
+          <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-20" style={{ background: '#74c69d' }} />
+          <div className="absolute -bottom-6 -left-6 w-20 h-20 rounded-full opacity-20" style={{ background: '#74c69d' }} />
+          <div className="relative z-10 flex flex-col items-center text-center">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-400 to-yellow-200 flex items-center justify-center mb-3 shadow-md">
+              <Crown className="w-5 h-5 text-yellow-900" />
+            </div>
+            <p className="text-[15px] font-bold text-white leading-tight mb-1">
+              Unlock Pro
+            </p>
+            <p className="text-[12px] text-white/80 font-medium mb-4">
+              Unlimited forms & responses.
+            </p>
+            <NavLink
+              to="/pricing"
+              className="flex items-center justify-center w-full py-2.5 rounded-xl text-[13px] font-bold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-md hover:shadow-lg animate-pulse hover:animate-none"
+              style={{ background: '#fff', color: '#1a3c2a' }}
+            >
+              Upgrade Now
+            </NavLink>
+          </div>
+        </div>
+      ) : (
+        <div className="mx-3 mb-4 p-4 rounded-2xl overflow-hidden relative" style={{ background: PRIMARY }}>
+          <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full opacity-10" style={{ background: PRIMARY_LIGHT }} />
+          <div className="absolute -bottom-3 -left-3 w-16 h-16 rounded-full opacity-10" style={{ background: PRIMARY_LIGHT }} />
+          <div className="relative z-10">
+            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center mb-3">
+              <Plus className="w-4 h-4 text-white" />
+            </div>
+            <p className="text-sm font-bold text-white leading-snug">
+              Build forms <span style={{ color: '#74c69d' }}>faster</span>
+            </p>
+            <p className="text-xs text-white/60 mt-1 mb-3">Drag, drop, publish.</p>
+            <NavLink
+              to="/builder"
+              className="flex items-center justify-center w-full py-1.5 rounded-xl text-xs font-bold transition-opacity hover:opacity-90"
+              style={{ background: '#fff', color: PRIMARY }}
+            >
+              Create Form →
+            </NavLink>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
   return (
-    <div className="flex h-screen overflow-hidden p-3" style={{ background: '#EAECE7' }}>
+    <div className="flex h-screen overflow-hidden md:p-3" style={{ background: '#EAECE7' }}>
       <Toaster />
       {/* ── Outer rounded card ───────────────────────────────────────── */}
-      <div className="flex flex-1 rounded-2xl overflow-hidden shadow-lg" style={{ background: '#F7F8F5' }}>
+      <div className="flex flex-1 md:rounded-2xl overflow-hidden shadow-lg" style={{ background: '#F7F8F5' }}>
 
-        {/* ── SIDEBAR ─────────────────────────────────────────────────── */}
-        <aside className="w-[210px] flex flex-col bg-white flex-shrink-0" style={{ borderRight: '1px solid #EAECE7' }}>
-          {/* Logo */}
-          <div className="flex items-center gap-2.5 px-5 py-5">
-            <div className="w-10 h-10 flex items-center justify-center text-ink">
-              <LogoIcon className="w-full h-full" />
-            </div>
-            <span className="font-bold text-lg tracking-tight" style={{ color: '#111' }}>FormBuilder</span>
-          </div>
-
-          {/* Nav */}
-          <div className="px-3 mb-1">
-            <p className="text-[10px] font-bold uppercase tracking-widest px-2 mb-2" style={{ color: '#9CA3AF' }}>MENU</p>
-          </div>
-          <nav className="px-3 space-y-0.5 mb-4">
-            {menuItems.map((item) => (
-              <NavLink
-                key={item.label}
-                to={item.to}
-                end={item.to === '/dashboard'}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'text-white shadow-sm' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
-                  }`
-                }
-                style={({ isActive }) => isActive ? { background: PRIMARY } : {}}
-              >
-                {({ isActive }) => (
-                  <>
-                    <item.icon className="w-4 h-4 flex-shrink-0" style={{ color: isActive ? '#fff' : undefined }} />
-                    <span>{item.label}</span>
-                  </>
-                )}
-              </NavLink>
-            ))}
-          </nav>
-
-          {/* Forms removed from here, now a dedicated tab in menu */}
-
-          {/* General section */}
-          <div className="px-3 pb-2">
-            <p className="text-[10px] font-bold uppercase tracking-widest px-2 mb-2" style={{ color: '#9CA3AF' }}>GENERAL</p>
-            <Link
-              to="/settings"
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${location.pathname === '/settings'
-                ? 'bg-primary text-white shadow-sm'
-                : 'text-muted hover:text-ink hover:bg-surface-soft'
-                }`}
-            >
-              <Settings className="w-4 h-4" />
-              Settings
-            </Link>
-            <Link
-              to="/help"
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${location.pathname === '/help'
-                ? 'bg-primary text-white shadow-sm'
-                : 'text-muted hover:text-ink hover:bg-surface-soft'
-                }`}
-            >
-              <HelpCircle className="w-4 h-4" />
-              Help
-            </Link>
-            <button
-              onClick={() => logout()}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted hover:text-ink hover:bg-surface-soft transition-all"
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </button>
-          </div>
-
-          {/* Bottom promo card */}
-          {user?.plan === 'free' ? (
-            <div className="mx-3 mb-4 p-5 rounded-[20px] overflow-hidden relative shadow-lg" style={{ background: 'linear-gradient(135deg, #1a3c2a 0%, #2d6a4f 100%)' }}>
-              <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-20" style={{ background: '#74c69d' }} />
-              <div className="absolute -bottom-6 -left-6 w-20 h-20 rounded-full opacity-20" style={{ background: '#74c69d' }} />
-              <div className="relative z-10 flex flex-col items-center text-center">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-400 to-yellow-200 flex items-center justify-center mb-3 shadow-md">
-                  <Crown className="w-5 h-5 text-yellow-900" />
-                </div>
-                <p className="text-[15px] font-bold text-white leading-tight mb-1">
-                  Unlock Pro
-                </p>
-                <p className="text-[12px] text-white/80 font-medium mb-4">
-                  Unlimited forms & responses.
-                </p>
-                <NavLink
-                  to="/pricing"
-                  className="flex items-center justify-center w-full py-2.5 rounded-xl text-[13px] font-bold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-md hover:shadow-lg animate-pulse hover:animate-none"
-                  style={{ background: '#fff', color: '#1a3c2a' }}
-                >
-                  Upgrade Now
-                </NavLink>
-              </div>
-            </div>
-          ) : (
-            <div className="mx-3 mb-4 p-4 rounded-2xl overflow-hidden relative" style={{ background: PRIMARY }}>
-              <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full opacity-10" style={{ background: PRIMARY_LIGHT }} />
-              <div className="absolute -bottom-3 -left-3 w-16 h-16 rounded-full opacity-10" style={{ background: PRIMARY_LIGHT }} />
-              <div className="relative z-10">
-                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center mb-3">
-                  <Plus className="w-4 h-4 text-white" />
-                </div>
-                <p className="text-sm font-bold text-white leading-snug">
-                  Build forms <span style={{ color: '#74c69d' }}>faster</span>
-                </p>
-                <p className="text-xs text-white/60 mt-1 mb-3">Drag, drop, publish.</p>
-                <NavLink
-                  to="/builder"
-                  className="flex items-center justify-center w-full py-1.5 rounded-xl text-xs font-bold transition-opacity hover:opacity-90"
-                  style={{ background: '#fff', color: PRIMARY }}
-                >
-                  Create Form →
-                </NavLink>
-              </div>
-            </div>
-          )}
+        {/* ── DESKTOP SIDEBAR ─────────────────────────────────────────── */}
+        <aside className="w-[210px] hidden md:flex flex-col bg-white flex-shrink-0 h-full" style={{ borderRight: '1px solid #EAECE7' }}>
+          <SidebarContent />
         </aside>
+
+        {/* ── MOBILE SIDEBAR OVERLAY ──────────────────────────────────── */}
+        {mobileMenuOpen && (
+          <div className="md:hidden fixed inset-0 z-50 flex">
+            <div className="fixed inset-0 bg-black/50" onClick={() => setMobileMenuOpen(false)}></div>
+            <aside className="relative flex-1 max-w-[260px] bg-white h-full flex flex-col shadow-xl animate-in slide-in-from-left duration-200">
+              <SidebarContent />
+              <button 
+                onClick={() => setMobileMenuOpen(false)}
+                className="absolute top-5 right-4 p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </aside>
+          </div>
+        )}
 
         {/* ── MAIN AREA ───────────────────────────────────────────────── */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Top header */}
-          <header className="flex items-center justify-between px-6 h-[60px] bg-white flex-shrink-0" style={{ borderBottom: '1px solid #EAECE7' }}>
-            {/* Search */}
-            <div className="flex items-center gap-2 rounded-xl px-4 h-9 text-sm min-w-[240px] focus-within:ring-2 focus-within:ring-green-500/20" style={{ background: '#F7F8F5', border: '1px solid #E5E7E0' }}>
-              <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              <input
-                type="text"
-                placeholder="Search forms…"
-                className="bg-transparent border-none outline-none w-full text-gray-700 placeholder:text-gray-400"
-                value={searchParams.get('q') || ''}
-                onChange={(e) => {
-                  if (e.target.value) {
-                    setSearchParams({ q: e.target.value });
-                    if (location.pathname !== '/dashboard') navigate('/dashboard');
-                  } else {
-                    setSearchParams({});
-                  }
-                }}
-              />
-              <span className="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: '#E5E7E0', color: '#6B7280' }}>⌘F</span>
+          <header className="flex items-center justify-between px-4 md:px-6 h-[60px] bg-white flex-shrink-0" style={{ borderBottom: '1px solid #EAECE7' }}>
+            {/* Left area: Hamburger + Search */}
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <button 
+                className="md:hidden p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                onClick={() => setMobileMenuOpen(true)}
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              
+              <div className="flex-1 md:flex-initial flex items-center gap-2 rounded-xl px-4 h-9 text-sm md:min-w-[240px] focus-within:ring-2 focus-within:ring-green-500/20" style={{ background: '#F7F8F5', border: '1px solid #E5E7E0' }}>
+                <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  className="bg-transparent border-none outline-none w-full text-gray-700 placeholder:text-gray-400"
+                  value={searchParams.get('q') || ''}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setSearchParams({ q: e.target.value });
+                      if (location.pathname !== '/dashboard') navigate('/dashboard');
+                    } else {
+                      setSearchParams({});
+                    }
+                  }}
+                />
+                <span className="hidden md:block ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: '#E5E7E0', color: '#6B7280' }}>⌘F</span>
+              </div>
             </div>
 
             {/* Right actions */}
-            <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-3">
               {user?.plan === 'free' ? (
                 <Link 
                   to="/pricing" 
-                  className="hidden md:flex items-center justify-center h-9 px-4 rounded-xl text-xs font-bold text-white transition-opacity hover:opacity-90 shadow-sm"
+                  className="flex items-center justify-center h-9 px-4 rounded-xl text-xs font-bold text-white transition-opacity hover:opacity-90 shadow-sm"
                   style={{ background: PRIMARY }}
                 >
                   Upgrade
                 </Link>
               ) : null}
               
-              <div className="hidden md:flex items-center justify-center h-9 px-3 rounded-xl border border-gray-200 bg-gray-50 text-[11px] font-bold tracking-wider uppercase text-gray-500">
+              <div className="flex items-center justify-center h-9 px-3 rounded-xl border border-gray-200 bg-gray-50 text-[11px] font-bold tracking-wider uppercase text-gray-500">
                 {user?.plan === 'premium' ? (
                   <span className="text-purple-600 flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>Premium Plan</span>
                 ) : user?.plan === 'pro' ? (

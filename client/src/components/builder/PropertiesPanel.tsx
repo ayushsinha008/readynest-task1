@@ -1,12 +1,12 @@
 import { useFormBuilderStore, type FormField } from '../../store/useFormBuilderStore';
 
-export default function PropertiesPanel() {
+export default function PropertiesPanel({ className = '' }: { className?: string }) {
   const { fields, selectedFieldId, updateField } = useFormBuilderStore();
   const selectedField = fields.find((f) => f.id === selectedFieldId);
 
   if (!selectedField) {
     return (
-      <div className="w-[320px] border-l border-hairline bg-surface-soft p-6 flex flex-col items-center justify-center text-center">
+      <div className={`w-full md:w-[320px] border-l border-hairline bg-surface-soft p-6 flex flex-col items-center justify-center text-center ${className}`}>
         <h3 className="font-semibold mb-2 text-ink">No Element Selected</h3>
         <p className="text-sm text-muted">Click on an element in the canvas to edit its properties.</p>
       </div>
@@ -42,7 +42,7 @@ export default function PropertiesPanel() {
   const hasOptions = ['dropdown', 'radio', 'checkbox'].includes(selectedField.type);
 
   return (
-    <div className="w-[320px] border-l border-hairline bg-surface-soft p-6 overflow-y-auto">
+    <div className={`w-full md:w-[320px] border-l border-hairline bg-surface-soft p-6 overflow-y-auto ${className}`}>
       <div className="flex items-center justify-between mb-6 pb-4 border-b border-hairline">
         <h3 className="font-bold text-ink font-sans">Field Properties</h3>
         <span className="text-xs bg-surface-card text-muted border border-hairline px-2 py-1 rounded-pill capitalize font-medium">{selectedField.type}</span>

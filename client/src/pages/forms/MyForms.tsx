@@ -106,8 +106,8 @@ export default function MyForms() {
   };
 
   return (
-    <div className="flex-1 flex flex-col p-6 overflow-hidden">
-      <div className="flex items-center justify-between mb-6 flex-shrink-0">
+    <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 flex-shrink-0 gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">My Forms</h1>
           <p className="text-sm text-gray-500 mt-1">Manage, edit, and export your forms and responses.</p>

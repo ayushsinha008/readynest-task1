@@ -29,7 +29,7 @@ export const submitForm = async (req: Request, res: Response, next: NextFunction
       return res.status(404).json({ success: false, message: 'Form not found' });
     }
 
-    const { data } = req.body;
+    const { data, respondentEmail } = req.body;
 
     // Optional: Add backend validation based on form.fields here
     for (const field of form.fields) {
@@ -47,6 +47,7 @@ export const submitForm = async (req: Request, res: Response, next: NextFunction
 
     const newResponse = await ResponseModel.create({
       formId: form._id,
+      respondentEmail: respondentEmail || 'Anonymous',
       data,
     });
 

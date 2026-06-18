@@ -253,7 +253,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col gap-3 p-5 overflow-hidden">
+    <div className="flex-1 min-h-0 flex flex-col gap-3 p-4 md:p-5 overflow-y-auto md:overflow-hidden">
 
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-shrink-0">
@@ -261,9 +261,9 @@ export default function Dashboard() {
           <h1 className="text-[22px] font-bold tracking-tight leading-none" style={{ color: '#111' }}>Dashboard</h1>
           <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Create, publish, and analyse your forms with ease.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mt-2 md:mt-0">
           <button onClick={refetchAll}
-            className="flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-semibold transition-all hover:bg-white"
+            className="hidden md:flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-semibold transition-all hover:bg-white"
             style={{ border: '1px solid #E8EAE4', color: '#6B7280' }}>
             <RefreshCw className="w-3 h-3" />Refresh
           </button>
@@ -276,7 +276,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Stat cards ──────────────────────────────────────────────── */}
-      <div className="flex gap-3 flex-shrink-0">
+      <div className="grid grid-cols-2 lg:flex lg:flex-row gap-3 flex-shrink-0">
         <StatCard label="Total Forms" value={statsData?.totalForms} sub="All your forms" dark loading={!statsLoaded} />
         <StatCard label="Published" value={statsData?.publishedForms} sub="Live & accepting" loading={!statsLoaded} />
         <StatCard label="Drafts" value={statsData?.draftForms} sub="Not published yet" loading={!statsLoaded} />
@@ -284,10 +284,10 @@ export default function Dashboard() {
       </div>
 
       {/* ── Middle row: Analytics | Quick Publish | Forms ─────────── */}
-      <div className="flex gap-3 flex-shrink-0" style={{ height: '210px' }}>
+      <div className="flex flex-col md:flex-row gap-3 flex-shrink-0 md:h-[210px]">
 
         {/* Form Analytics chart */}
-        <div className="bg-white rounded-xl flex flex-col p-4 flex-1 min-w-0 overflow-hidden" style={{ border: '1px solid #E8EAE4' }}>
+        <div className="bg-white rounded-xl flex flex-col p-4 flex-1 min-w-0 overflow-hidden min-h-[210px] md:min-h-0" style={{ border: '1px solid #E8EAE4' }}>
           <div className="flex items-center justify-between mb-2 flex-shrink-0">
             <div>
               <p className="text-xs font-bold" style={{ color: '#111' }}>Form Analytics</p>
@@ -319,7 +319,7 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Publish */}
-        <div className="bg-white rounded-xl flex flex-col p-4 flex-shrink-0 overflow-hidden" style={{ border: '1px solid #E8EAE4', width: '220px' }}>
+        <div className="bg-white rounded-xl flex flex-col p-4 flex-shrink-0 overflow-hidden w-full md:w-[220px]" style={{ border: '1px solid #E8EAE4' }}>
           <p className="text-xs font-bold flex-shrink-0 mb-2" style={{ color: '#111' }}>Quick Publish</p>
           {formsLoading ? (
             <div className="flex-1 flex flex-col gap-2 justify-center">
@@ -360,7 +360,7 @@ export default function Dashboard() {
         </div>
 
         {/* Forms list */}
-        <div className="bg-white rounded-xl flex flex-col flex-shrink-0 overflow-hidden" style={{ border: '1px solid #E8EAE4', width: '200px' }}>
+        <div className="bg-white rounded-xl flex flex-col flex-shrink-0 overflow-hidden w-full md:w-[200px] h-[210px] md:h-auto" style={{ border: '1px solid #E8EAE4' }}>
           <div className="flex items-center justify-between px-3.5 py-2.5 flex-shrink-0" style={{ borderBottom: '1px solid #F4F5F1' }}>
             <p className="text-xs font-bold" style={{ color: '#111' }}>Forms</p>
             <Link to="/builder" className="flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-lg transition-colors hover:opacity-80"
@@ -391,7 +391,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Bottom row: Recent Responses | Conversion Rate ────────── */}
-      <div className="flex gap-3 flex-1 min-h-0 overflow-hidden">
+      <div className="flex flex-col md:flex-row gap-3 flex-1 min-h-[400px] md:min-h-0 overflow-hidden">
 
         {/* Recent Responses */}
         <div className="bg-white rounded-xl flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden" style={{ border: '1px solid #E8EAE4' }}>
@@ -450,7 +450,7 @@ export default function Dashboard() {
         </div>
 
         {/* Conversion Rate — Dark Theme */}
-        <div className="rounded-xl flex flex-col p-5 flex-shrink-0 overflow-hidden shadow-sm" style={{ background: PRIMARY, width: '250px' }}>
+        <div className="rounded-xl flex flex-col p-5 flex-shrink-0 overflow-hidden shadow-sm w-full md:w-[250px]" style={{ background: PRIMARY }}>
           <div className="flex items-center justify-between mb-3 flex-shrink-0">
             <p className="text-xs font-bold text-white">Conversion Rate</p>
             <Eye className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.45)' }} />
