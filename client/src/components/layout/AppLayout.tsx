@@ -44,23 +44,52 @@ export default function AppLayout() {
     typeof Notification !== 'undefined' && Notification.permission === 'granted'
   );
 
-  // Fetch Notification History
+  // Fetch Notification History and Poll
   useEffect(() => {
-    if (isAuthenticated) {
-      api.get('/analytics/notifications').then((res) => {
-        if (res.data?.success && res.data?.notifications) {
-          setNotifications(prev => {
-            const merged = [...prev];
-            res.data.notifications.forEach((newNotif: any) => {
-              if (!merged.find(n => n.id === newNotif.id)) {
-                merged.push(newNotif);
-              }
+    let isInitialLoad = true;
+
+    const fetchNotifications = async () => {
+      if (isAuthenticated) {
+        try {
+          const res = await api.get('/analytics/notifications');
+          if (res.data?.success && res.data?.notifications) {
+            setNotifications(prev => {
+              const merged = [...prev];
+              
+              res.data.notifications.forEach((newNotif: any) => {
+                if (!merged.find(n => n.id === newNotif.id)) {
+                  // If this is a new notification arriving during polling
+                  if (!isInitialLoad && prev.length > 0) {
+                    newNotif.read = false;
+                    toast.success(newNotif.message, {
+                      duration: 5000,
+                      position: 'top-right',
+                    });
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                      new Notification('New Form Submission', {
+                        body: newNotif.message,
+                        icon: '/favicon.ico'
+                      });
+                    }
+                  }
+                  merged.push(newNotif);
+                }
+              });
+              
+              return merged.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 50);
             });
-            return merged.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 50);
-          });
+          }
+        } catch (err) {
+          console.error("Failed to load notifications history", err);
         }
-      }).catch(err => console.error("Failed to load notifications history", err));
-    }
+      }
+    };
+
+    fetchNotifications().then(() => { isInitialLoad = false; });
+    
+    // Poll every 10 seconds (Vercel Serverless workaround for WebSockets)
+    const interval = setInterval(fetchNotifications, 10000);
+    return () => clearInterval(interval);
   }, [isAuthenticated]);
 
   // Save notifications to localStorage when they change
@@ -98,48 +127,6 @@ export default function AppLayout() {
       return () => clearTimeout(timer);
     }
   }, []);
-
-  useEffect(() => {
-    const userId = user?.id || (user as any)?._id;
-    if (isAuthenticated && userId) {
-      // Connect to socket when authenticated
-      const socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000', {
-        withCredentials: true
-      });
-
-      socket.on('connect', () => {
-        socket.emit('join', userId);
-      });
-
-      socket.on('new_submission', (data: any) => {
-        const newNotif = {
-          id: Date.now().toString(),
-          message: data.message,
-          formId: data.formId,
-          time: new Date().toISOString(),
-          read: false
-        };
-        
-        setNotifications((prev) => [newNotif, ...prev].slice(0, 50)); // keep last 50
-        
-        toast.success(data.message, {
-          duration: 5000,
-          position: 'top-right',
-        });
-
-        if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('New Form Submission', {
-            body: data.message,
-            icon: '/favicon.ico'
-          });
-        }
-      });
-
-      return () => {
-        socket.disconnect();
-      };
-    }
-  }, [isAuthenticated, user?.id, (user as any)?._id]);
 
   const { data: forms } = useQuery({
     queryKey: ['forms'],
