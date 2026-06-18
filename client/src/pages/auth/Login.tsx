@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
-import { useNavigate, Link, Navigate } from 'react-router-dom';
+import { useNavigate, Link, Navigate, useSearchParams } from 'react-router-dom';
 import api from '../../lib/api';
 import LogoIcon from '../../components/icons/LogoIcon';
 
@@ -11,6 +11,8 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, isAuthenticated, isLoading } = useAuthStore();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get('returnTo');
 
   if (isLoading) {
     return (
@@ -21,7 +23,7 @@ export default function Login() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={returnTo || "/dashboard"} replace />;
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -31,7 +33,7 @@ export default function Login() {
       setError('');
       const { data } = await api.post('/auth/login', { email, password });
       login(data.user);
-      navigate('/dashboard');
+      navigate(returnTo || '/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Something went wrong');
     } finally {
@@ -78,7 +80,7 @@ export default function Login() {
           </button>
         </form>
         <p className="mt-8 text-center text-[15px] text-gray-500 font-medium">
-          Don't have an account? <Link to="/register" className="text-primary font-semibold hover:underline">Register</Link>
+          Don't have an account? <Link to={returnTo ? `/register?returnTo=${encodeURIComponent(returnTo)}` : "/register"} className="text-primary font-semibold hover:underline">Register</Link>
         </p>
       </div>
     </div>
