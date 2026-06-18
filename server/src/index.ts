@@ -46,7 +46,9 @@ if (!process.env.VERCEL) {
   app.set('io', io);
   
   io.on('connection', (socket) => {
+    console.log('Socket client connected:', socket.id);
     socket.on('join', (userId) => {
+      console.log('Socket client joined room:', userId);
       socket.join(userId);
     });
   });

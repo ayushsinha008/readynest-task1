@@ -57,11 +57,14 @@ export const submitForm = async (req: Request, res: Response, next: NextFunction
     // Emit real-time notification
     const io = req.app.get('io');
     if (io) {
+      console.log(`Emitting new_submission to room: ${form.createdBy.toString()}`);
       io.to(form.createdBy.toString()).emit('new_submission', {
         formId: form._id,
         formTitle: form.title,
         message: `New response received for "${form.title}"`
       });
+    } else {
+      console.log('Socket IO instance not found on req.app');
     }
 
     res.status(201).json({ success: true, message: 'Response submitted successfully', responseId: newResponse._id });

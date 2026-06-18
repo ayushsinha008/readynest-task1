@@ -84,6 +84,21 @@ export default function AppLayout() {
 
   useEffect(() => { checkAuth(); }, [checkAuth]);
 
+  // Auto-prompt for notifications if not yet asked
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      const timer = setTimeout(() => {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') {
+            setBrowserNotificationEnabled(true);
+            toast.success('Desktop notifications enabled!');
+          }
+        });
+      }, 2000); // slight delay so it's not jarring immediately on load
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   useEffect(() => {
     const userId = user?.id || (user as any)?._id;
     if (isAuthenticated && userId) {
