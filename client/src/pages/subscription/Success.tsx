@@ -4,13 +4,12 @@ import { CheckCircle } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 
 export default function Success() {
-  const { updateUser } = useAuthStore();
+  const { checkAuth } = useAuthStore();
 
   useEffect(() => {
-    // In our mock, the backend already updated the user. 
-    // We update local state immediately so they see Pro features.
-    updateUser({ plan: 'pro', subscriptionStatus: 'active' });
-  }, [updateUser]);
+    // Fetch the latest user profile from the backend to get the updated subscription status
+    checkAuth();
+  }, [checkAuth]);
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-50 h-full">
