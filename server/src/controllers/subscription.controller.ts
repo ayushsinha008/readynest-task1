@@ -2,11 +2,10 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import User from '../models/User';
 
-const PAYU_MERCHANT_KEY = process.env.PAYU_MERCHANT_KEY || 'gtKFFx';
-const PAYU_MERCHANT_SALT = process.env.PAYU_MERCHANT_SALT || 'eCwWELxi';
-
 export const createPayuHash = async (req: any, res: Response) => {
   try {
+    const PAYU_MERCHANT_KEY = process.env.PAYU_MERCHANT_KEY || 'gtKFFx';
+    const PAYU_MERCHANT_SALT = process.env.PAYU_MERCHANT_SALT || 'eCwWELxi';
     const user = req.user;
     if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
@@ -55,6 +54,8 @@ export const createPayuHash = async (req: any, res: Response) => {
 
 export const payuSuccessCallback = async (req: Request, res: Response) => {
   try {
+    const PAYU_MERCHANT_KEY = process.env.PAYU_MERCHANT_KEY || 'gtKFFx';
+    const PAYU_MERCHANT_SALT = process.env.PAYU_MERCHANT_SALT || 'eCwWELxi';
     const { txnid, amount, productinfo, firstname, email, status, hash, udf1, udf2 } = req.body;
 
     // Verify reverse hash to ensure response is actually from PayU
