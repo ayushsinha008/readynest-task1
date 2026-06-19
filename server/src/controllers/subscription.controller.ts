@@ -28,7 +28,7 @@ export const createPayuHash = async (req: any, res: Response) => {
     const udf2 = user.id.toString(); // pass user ID in udf2
     
     // Hash sequence: key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT
-    const hashString = `${PAYU_MERCHANT_KEY}|${txnid}|${amount}|${productinfo}|${firstname}|${email}|${udf1}|${udf2}||||||||${PAYU_MERCHANT_SALT}`;
+    const hashString = `${PAYU_MERCHANT_KEY}|${txnid}|${amount}|${productinfo}|${firstname}|${email}|${udf1}|${udf2}|||||||||${PAYU_MERCHANT_SALT}`;
     
     const hash = crypto.createHash('sha512').update(hashString).digest('hex');
 
