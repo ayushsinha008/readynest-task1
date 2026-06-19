@@ -32,6 +32,10 @@ export const createPayuHash = async (req: any, res: Response) => {
     
     const hash = crypto.createHash('sha512').update(hashString).digest('hex');
 
+    const protocol = process.env.VERCEL ? 'https' : (req.protocol || 'http');
+    const host = req.headers.host;
+    const backendUrl = process.env.BACKEND_URL || `${protocol}://${host}`;
+
     res.status(200).json({
       key: PAYU_MERCHANT_KEY,
       txnid,
@@ -42,8 +46,8 @@ export const createPayuHash = async (req: any, res: Response) => {
       phone,
       udf1,
       udf2,
-      surl: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/subscription/payu-success`,
-      furl: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/subscription/payu-failure`,
+      surl: `${backendUrl}/api/subscription/payu-success`,
+      furl: `${backendUrl}/api/subscription/payu-failure`,
       hash,
     });
   } catch (error) {
@@ -81,17 +85,23 @@ export const payuSuccessCallback = async (req: Request, res: Response) => {
     }
 
     // Redirect user back to frontend success page
-    const clientUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const protocol = process.env.VERCEL ? 'https' : (req.protocol || 'http');
+    const host = req.headers.host;
+    const clientUrl = process.env.FRONTEND_URL || `${protocol}://${host}`;
     res.redirect(`${clientUrl}/success?txnid=${txnid}`);
   } catch (error) {
     console.error('Error in PayU success callback:', error);
-    const clientUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const protocol = process.env.VERCEL ? 'https' : (req.protocol || 'http');
+    const host = req.headers.host;
+    const clientUrl = process.env.FRONTEND_URL || `${protocol}://${host}`;
     res.redirect(`${clientUrl}/cancel`);
   }
 };
 
 export const payuFailureCallback = async (req: Request, res: Response) => {
-  const clientUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const protocol = process.env.VERCEL ? 'https' : (req.protocol || 'http');
+  const host = req.headers.host;
+  const clientUrl = process.env.FRONTEND_URL || `${protocol}://${host}`;
   res.redirect(`${clientUrl}/cancel`);
 };
 
