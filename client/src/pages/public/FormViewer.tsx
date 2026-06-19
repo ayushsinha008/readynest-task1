@@ -5,10 +5,6 @@ import api from '../../lib/api';
 import { useForm as useHookForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-
-const stripePromise = loadStripe('pk_test_TYooMQauvdEDq54NiTphI7jx');
 
 export default function FormViewer() {
   const { slug } = useParams();
@@ -89,9 +85,7 @@ export default function FormViewer() {
             {formSchema.description && <p className="mt-4 text-lg text-muted font-sans">{formSchema.description}</p>}
           </div>
           <div className="p-10">
-            <Elements stripe={stripePromise}>
-              <FormRenderer formSchema={formSchema} onSubmit={handleFormSubmit} />
-            </Elements>
+            <FormRenderer formSchema={formSchema} onSubmit={handleFormSubmit} />
           </div>
         </div>
       </div>
@@ -141,25 +135,9 @@ export function FormRenderer({ formSchema, onSubmit }: { formSchema: any, onSubm
     resolver: zodResolver(dynamicSchema)
   });
 
-  const stripe = useStripe();
-  const elements = useElements();
-
   const handleFormSubmit = async (data: any) => {
-    if (stripe && elements) {
-      const cardElement = elements.getElement(CardElement);
-      if (cardElement) {
-        // Mock payment processing since we don't have a real backend payment-intent route yet
-        const { error, paymentMethod } = await stripe.createPaymentMethod({
-          type: 'card',
-          card: cardElement,
-        });
-        if (error) {
-          alert(error.message);
-          return;
-        }
-        data.paymentMethodId = paymentMethod.id;
-      }
-    }
+    // In the future, if the form contains a payment field, 
+    // this would hit the backend to generate a PayU hash and redirect to PayU.
     await onSubmit(data);
   };
 
@@ -284,20 +262,10 @@ export function FormRenderer({ formSchema, onSubmit }: { formSchema: any, onSubm
           {field.type === 'payment' && (
             <div className="mt-2">
               <div className={`p-4 border border-hairline ${radiusClass} bg-canvas`}>
-                <CardElement options={{
-                  style: {
-                    base: {
-                      fontSize: '16px',
-                      color: '#111',
-                      '::placeholder': {
-                        color: '#898989',
-                      },
-                    },
-                  },
-                }} />
+                <p className="text-muted text-sm italic">Payment will be securely processed via PayU after submission.</p>
               </div>
               {field.placeholder && (
-                <p className="text-sm font-medium text-ink mt-2">Amount to pay: ${field.placeholder}</p>
+                <p className="text-sm font-medium text-ink mt-2">Amount to pay: ₹{field.placeholder}</p>
               )}
             </div>
           )}
