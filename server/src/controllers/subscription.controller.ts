@@ -4,8 +4,8 @@ import User from '../models/User';
 
 export const createPayuHash = async (req: any, res: Response) => {
   try {
-    const PAYU_MERCHANT_KEY = process.env.PAYU_MERCHANT_KEY || 'gtKFFx';
-    const PAYU_MERCHANT_SALT = process.env.PAYU_MERCHANT_SALT || 'eCwWELxi';
+    const PAYU_MERCHANT_KEY = process.env.PAYU_MERCHANT_KEY || 'jBrn85';
+    const PAYU_MERCHANT_SALT = process.env.PAYU_MERCHANT_SALT || '1TueDshG2v8q96IEdP7SVLPkOFydzbA5';
     const user = req.user;
     if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
@@ -58,8 +58,8 @@ export const createPayuHash = async (req: any, res: Response) => {
 
 export const payuSuccessCallback = async (req: Request, res: Response) => {
   try {
-    const PAYU_MERCHANT_KEY = process.env.PAYU_MERCHANT_KEY || 'gtKFFx';
-    const PAYU_MERCHANT_SALT = process.env.PAYU_MERCHANT_SALT || 'eCwWELxi';
+    const PAYU_MERCHANT_KEY = process.env.PAYU_MERCHANT_KEY || 'jBrn85';
+    const PAYU_MERCHANT_SALT = process.env.PAYU_MERCHANT_SALT || '1TueDshG2v8q96IEdP7SVLPkOFydzbA5';
     const { txnid, amount, productinfo, firstname, email, status, hash, udf1, udf2 } = req.body;
 
     // Verify reverse hash to ensure response is actually from PayU
