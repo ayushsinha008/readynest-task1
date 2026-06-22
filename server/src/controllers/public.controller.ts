@@ -34,9 +34,24 @@ export const submitForm = async (req: Request, res: Response, next: NextFunction
     // Optional: Add backend validation based on form.fields here
     for (const field of form.fields) {
       if (field.type === 'file' && data[field.id]) {
+        const fileData: string = data[field.id];
+        
+        // Security: Only allow image and PDF file uploads
+        const allowedTypes = ['data:image/jpeg', 'data:image/png', 'data:image/gif', 'data:image/webp', 'data:application/pdf'];
+        const isAllowed = allowedTypes.some(type => fileData.startsWith(type));
+        if (!isAllowed) {
+          return res.status(400).json({ success: false, message: `Invalid file type for field "${field.label}". Only images and PDFs are allowed.` });
+        }
+        
+        // Security: Limit file size to 5MB (base64 ~6.7MB)
+        if (fileData.length > 7 * 1024 * 1024) {
+          return res.status(400).json({ success: false, message: `File for field "${field.label}" is too large. Maximum size is 5MB.` });
+        }
+
         try {
-          const uploadRes = await cloudinary.uploader.upload(data[field.id], {
+          const uploadRes = await cloudinary.uploader.upload(fileData, {
             folder: `formbuilder/${form._id}`,
+            resource_type: 'auto',
           });
           data[field.id] = uploadRes.secure_url;
         } catch (uploadError) {

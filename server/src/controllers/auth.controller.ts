@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import crypto from 'crypto';
 import User from '../models/User';
 import { generateTokens } from '../utils/generateToken';
 import { sendEmail } from '../utils/sendEmail';
@@ -25,7 +26,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         userExists.password = password; 
         await userExists.save();
 
-        const emailResult = await sendEmail({
+        await sendEmail({
           to: userExists.email,
           subject: 'Verify your FormBuilder account',
           text: `Your OTP is: ${otpCode}. It will expire in 10 minutes.`,
@@ -34,8 +35,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         return res.status(200).json({
           success: true,
           message: 'OTP sent to email',
-          email: userExists.email,
-          previewUrl: emailResult?.previewUrl
+          email: userExists.email
         });
       }
     }
@@ -52,7 +52,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       otpExpires
     });
 
-    const emailResult = await sendEmail({
+    await sendEmail({
       to: user.email,
       subject: 'Verify your FormBuilder account',
       text: `Your OTP is: ${otpCode}. It will expire in 10 minutes.`,
@@ -61,8 +61,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     res.status(201).json({
       success: true,
       message: 'OTP sent to email',
-      email: user.email,
-      previewUrl: emailResult?.previewUrl
+      email: user.email
     });
   } catch (error) {
     next(error);
@@ -85,6 +84,11 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    // Security: Block unverified users from logging in
+    if (!user.isVerified) {
+      return res.status(403).json({ success: false, message: 'Please verify your email before logging in.' });
     }
 
     const { accessToken, refreshToken } = generateTokens(res, (user._id as any).toString());
@@ -189,7 +193,7 @@ export const resendOTP = async (req: Request, res: Response, next: NextFunction)
     user.otpExpires = otpExpires;
     await user.save();
 
-    const emailResult = await sendEmail({
+    await sendEmail({
       to: user.email,
       subject: 'Verify your FormBuilder account',
       text: `Your new OTP is: ${otpCode}. It will expire in 10 minutes.`,
@@ -197,28 +201,41 @@ export const resendOTP = async (req: Request, res: Response, next: NextFunction)
 
     res.status(200).json({ 
       success: true, 
-      message: 'New OTP sent to email',
-      previewUrl: emailResult?.previewUrl
+      message: 'New OTP sent to email'
     });
   } catch (error) {
     next(error);
   }
 };
 
-// Simplified Forgot Password / Reset Password for prototype
 export const forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email } = req.body;
     const user = await User.findOne({ email });
     
+    // Security: Always return same message to prevent email enumeration
     if (!user) {
-      return res.status(404).json({ success: false, message: 'No user with that email' });
+      return res.status(200).json({ success: true, message: 'If an account with that email exists, a reset link has been sent.' });
     }
 
-    // In a real app, generate a reset token and send an email
-    console.log(`Reset password link: http://localhost:5173/reset-password/${user._id}`);
+    // Generate a secure random reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
     
-    res.status(200).json({ success: true, message: 'Password reset link sent to email (check console)' });
+    user.passwordResetToken = hashedToken;
+    user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    const clientUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetUrl = `${clientUrl}/reset-password/${resetToken}`;
+
+    await sendEmail({
+      to: user.email,
+      subject: 'Password Reset Request - FormBuilder',
+      text: `You requested a password reset. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you did not request this, please ignore this email.`,
+    });
+
+    res.status(200).json({ success: true, message: 'If an account with that email exists, a reset link has been sent.' });
   } catch (error) {
     next(error);
   }
@@ -227,17 +244,25 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
 export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { password } = req.body;
-    // Using user id as token for simplification
-    const user = await User.findById(req.params.resetToken);
+    
+    // Hash the token from URL to compare with stored hash
+    const hashedToken = crypto.createHash('sha256').update(String(req.params.resetToken)).digest('hex');
+    
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: new Date() } // Token must not be expired
+    });
 
     if (!user) {
-      return res.status(400).json({ success: false, message: 'Invalid token' });
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset token. Please request a new one.' });
     }
 
     user.password = password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
     await user.save();
 
-    res.status(200).json({ success: true, message: 'Password reset successful' });
+    res.status(200).json({ success: true, message: 'Password reset successful. You can now log in.' });
   } catch (error) {
     next(error);
   }
@@ -274,6 +299,17 @@ export const updateProfile = async (req: any, res: Response, next: NextFunction)
       const emailTaken = await User.findOne({ email, _id: { $ne: userId } });
       if (emailTaken) {
         return res.status(400).json({ success: false, message: 'Email is already in use' });
+      }
+    }
+
+    // Security: Validate avatar is a valid image data URL and not too large (max 2MB as base64)
+    if (avatar !== undefined && avatar !== null && avatar !== '') {
+      if (!avatar.startsWith('data:image/')) {
+        return res.status(400).json({ success: false, message: 'Invalid avatar format. Must be an image.' });
+      }
+      // base64 size check: 2MB raw = ~2.73MB base64
+      if (avatar.length > 3 * 1024 * 1024) {
+        return res.status(400).json({ success: false, message: 'Avatar image is too large. Maximum size is 2MB.' });
       }
     }
 

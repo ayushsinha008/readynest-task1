@@ -2,8 +2,16 @@ import jwt from 'jsonwebtoken';
 import { Response } from 'express';
 
 export const generateTokens = (res: Response, userId: string) => {
-  const accessTokenSecret = process.env.JWT_ACCESS_SECRET || 'fallback_access_secret_123';
-  const refreshTokenSecret = process.env.JWT_REFRESH_SECRET || 'fallback_refresh_secret_123';
+  const accessTokenSecret = process.env.JWT_ACCESS_SECRET;
+  const refreshTokenSecret = process.env.JWT_REFRESH_SECRET;
+
+  // Security: Crash fast if secrets are not set (prevent weak fallback in production)
+  if (!accessTokenSecret || accessTokenSecret === 'your_jwt_access_secret_here') {
+    throw new Error('FATAL: JWT_ACCESS_SECRET environment variable is not set or is using the default placeholder.');
+  }
+  if (!refreshTokenSecret || refreshTokenSecret === 'your_jwt_refresh_secret_here') {
+    throw new Error('FATAL: JWT_REFRESH_SECRET environment variable is not set or is using the default placeholder.');
+  }
 
   const accessToken = jwt.sign({ id: userId }, accessTokenSecret, {
     expiresIn: '15m',
